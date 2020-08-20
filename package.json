@@ -11,6 +11,8 @@
     "snipsync": "./snippetsync/index.js"
   },
   "dependencies": {
+    "@octokit/rest": "^18.0.3",
+    "js-logger": "^1.6.0",
     "node-read-yaml": "^1.0.1"
   }
 }
