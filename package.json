@@ -1,0 +1,9 @@
+{
+  "name": "snippetsync",
+  "version": "1.0.0",
+  "description": "Sync docs with github repo code snippets",
+  "main": "index.js",
+  "repository": "git@github.com:temporalio/snippetsync.git",
+  "author": "Cully Wakelin <cullywakelin@gmail.com>",
+  "license": "MIT"
+}
