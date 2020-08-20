@@ -14,7 +14,9 @@
     "@octokit/rest": "^18.0.3",
     "arraybuffer-to-buffer": "^0.0.7",
     "js-logger": "^1.6.0",
+    "line-reader": "^0.4.0",
     "node-read-yaml": "^1.0.1",
+    "readdirp": "^3.4.0",
     "unzipper": "^0.10.11"
   }
 }

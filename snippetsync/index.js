@@ -13,4 +13,4 @@ logger.info("config loaded:");
 logger.info(cfg);
 
 synctron = new sync.Sync(cfg, logger);
-synctron.getRepos(); 
+synctron.run();
