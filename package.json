@@ -9,5 +9,8 @@
   "private": true,
   "scripts": {
     "snipsync": "./snippetsync/index.js"
+  },
+  "dependencies": {
+    "node-read-yaml": "^1.0.1"
   }
 }
