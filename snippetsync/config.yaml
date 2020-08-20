@@ -1,0 +1,18 @@
+# origins is a list of public github repos
+origins:
+    # example
+    # owner is the github owner
+    # repo is the name of the github repo
+    # - owner: <owner>
+    # repo : <repo>
+  - owner: temporalio
+    repo: go-samples
+
+# target is the local dir where the tool will look for files to write snippets to
+# default is docs
+target: docs
+
+# auth is used to authenticate with the github API
+auth:
+  # personal access token to increase rate limit of github API
+  token: {personal_access_token}
