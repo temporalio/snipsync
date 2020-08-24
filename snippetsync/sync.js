@@ -1,11 +1,15 @@
 const { Octokit } = require("@octokit/rest");
 const common = require('./common.js');
-const fs = require('fs');
+const { writeFile, unlink, createReadStream } = require('fs');
+const { promisify } = require('util');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const unzipper = require('unzipper');
 const snip = require('./snippet.js');
 const readdirp = require('readdirp');
 const lineReader = require('line-reader');
+
+const writeAsync = promisify(writeFile);
+const unlinkAsync = promisify(unlink);
 
 class Sync {
   constructor(cfg, logger) {
@@ -27,17 +31,15 @@ class Sync {
   }
 
   async getRepos () {
-    var self = this;
-    for (var i = 0; i < this.origins.length; i++) {
-      var origin = this.origins[i];
-      self.logger.info("downloading repo: " + origin.owner + "/" + origin.repo);
-      var bytearray = await this.getArchive(origin);
-      var filename = origin.repo + ".zip"
-      self.logger.info("saving as " + filename);
-      var buffer = arrayBuffToBuff(bytearray);
-      fs.writeFile(filename, buffer, async function(err){
-        await self.unzip(filename)
-      });
+    for (let i = 0; i < this.origins.length; i++) {
+      let origin = this.origins[i];
+      this.logger.info("downloading repo: " + origin.owner + "/" + origin.repo);
+      let bytearray = await this.getArchive(origin);
+      let filename = origin.repo + ".zip"
+      this.logger.info("saving as " + filename);
+      let buffer = arrayBuffToBuff(bytearray);
+      const raw = await writeAsync(filename, buffer);
+      await this.unzip(filename);
     }
   }
 
@@ -47,12 +49,12 @@ class Sync {
     var zipPath = dir + "/" + filename;
     var extractPath = dir + "/" + common.extractionDir;
     self.logger.info("extracting to " + extractPath);
-    var result = await fs.createReadStream(zipPath).pipe(
+    var result = await createReadStream(zipPath).pipe(
       unzipper.Extract({
         path: extractPath
       })
     );
-    await fs.unlinkSync(zipPath);
+    await unlinkAsync(zipPath);
     self.logger.info("extraction successful");
   }
 
