@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-var logger = require('js-logger');
-var config = require ('./config.js');
-var sync = require ('./sync.js');
+const logger = require('js-logger');
+const config = require ('./config.js');
+const sync = require ('./sync.js');
 
 logger.useDefaults();
 

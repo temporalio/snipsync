@@ -11,8 +11,3 @@ origins:
 # target is the local dir where the tool will look for files to write snippets to
 # default is docs
 target: docs
-
-# auth is used to authenticate with the github API
-auth:
-  # personal access token to increase rate limit of github API
-  token: {personal_access_token}
