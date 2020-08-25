@@ -1,8 +1,15 @@
+const common = require('./common.js');
+
 class Snippet {
-  constructor (ext) {
-    this.id = "";
+  constructor (id, ext) {
+    this.id = id;
     this.ext = ext;
     this.lines = [];
+  }
+
+  fmt() {
+    this.lines.splice(0, 0, common.fmtStartCodeBlock(this.ext));
+    this.lines.splice(this.lines.length, 0, common.markdowncodeticks);
   }
 }
 

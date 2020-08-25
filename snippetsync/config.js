@@ -12,7 +12,6 @@ function readConfig() {
   try {
     const cfg = readcfg.sync(path);
     cfg.auth = { token: GITHUB_AUTH_TOKEN };
-    console.log(cfg);
     return cfg
   } catch (err) {
     return err

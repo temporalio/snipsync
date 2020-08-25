@@ -1,3 +1,7 @@
+const rootDir = process.cwd();
+
+module.exports.rootDir = rootDir;
+
 const cfgfile = "snippetsync/config.yaml";
 
 module.exports.cfgfile = cfgfile;
@@ -9,6 +13,12 @@ module.exports.extractionDir = extractionDir;
 const markdowncodeticks = "```";
 
 module.exports.markdowncodeticks = markdowncodeticks;
+
+function fmtStartCodeBlock (ext) {
+  return markdowncodeticks + ext;
+}
+
+module.exports.fmtStartCodeBlock = fmtStartCodeBlock;
 
 const readstart = "@@@START";
 

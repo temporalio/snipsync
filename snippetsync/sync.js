@@ -5,6 +5,7 @@ const { promisify } = require('util');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const unzipper = require('unzipper');
 const snip = require('./snippet.js');
+const splice = require('./splice.js');
 const readdirp = require('readdirp');
 const { eachLine } = require('line-reader');
 
@@ -21,19 +22,22 @@ class Sync {
       auth: cfg.auth.token
     })
     this.github = octokit;
-    this.snippets = [];
   }
 
-  async run () {
-    await this.getRepos();
-    let filePaths = await this.getFilePaths();
-    let snippets = await this.extractSnippets(filePaths);
+  async run() {
+    //await this.getRepos();
+    let extractfp = await this.getExtractionFilePaths();
+    let snippets = await this.extractSnippets(extractfp);
+    let insertfps = await this.getInsertFilePaths();
+    let files = await this.getInsertFiles(insertfps);
+    let filesToWrite = await this.spliceSnippets(snippets, files);
+    await this.writeFiles(filesToWrite);
   }
 
-  async getRepos () {
+  async getRepos() {
     for (let i = 0; i < this.origins.length; i++) {
       let origin = this.origins[i];
-      this.logger.info("downloading repo: " + origin.owner + "/" + origin.repo);
+      this.logger.info("downloading repo: " + dirAppend(origin.owner, origin.repo));
       let bytearray = await this.getArchive(origin);
       let filename = origin.repo + ".zip"
       this.logger.info("saving as " + filename);
@@ -44,13 +48,12 @@ class Sync {
   }
 
   async unzip(filename) {
-    let dir = process.cwd();
-    let zipPath = dir + "/" + filename;
-    let extractPath = dir + "/" + common.extractionDir;
-    this.logger.info("extracting to " + extractPath);
+    let zipPath = dirAppend(common.rootDir, filename);
+    let unzipPath = dirAppend(common.rootDir, common.extractionDir);
+    this.logger.info("extracting to " + unzipPath);
     let result = await createReadStream(zipPath).pipe(
       unzipper.Extract({
-        path: extractPath
+        path: unzipPath
       })
     );
     await unlinkAsync(zipPath);
@@ -66,31 +69,25 @@ class Sync {
     return result.data
   }
 
-  async getFilePaths () {
-    let dir = process.cwd();
-    let readDir = dir + "/" + common.extractionDir;
-    let allFilePaths = [];
-    let settings = {
-      root: readDir,
-      entryType: 'all'
-    }
-    this.logger.info("loading file paths")
+  async getExtractionFilePaths() {
+    let readDir = dirAppend(common.rootDir, common.extractionDir);
+    this.logger.info("loading extraction file paths from " + readDir);
+    let filePaths = [];
     for await (const entry of readdirp(readDir)) {
       const {path} = entry;
-      allFilePaths.push({path})
+      filePaths.push({path})
     }
-    return allFilePaths;
+    return filePaths;
   }
 
   async extractSnippets (filePaths) {
     this.logger.info("extracting snippets from files");
-    let dir = process.cwd();
-    let extractPath = dir + "/" + common.extractionDir;
+    let extractRootPath = dirAppend(common.rootDir, common.extractionDir);
     let snippets = [];
     for (let i = 0; i < filePaths.length; i++) {
       let item = filePaths[i];
       let ext = determineExtension(item.path);
-      let path = extractPath + "/" + item.path;
+      let path = dirAppend(extractRootPath, item.path);
       let capture = false;
       let fileSnipsCount = 0;
       let fileSnips = [];
@@ -103,25 +100,123 @@ class Sync {
           fileSnips[fileSnipsCount].lines.push(line);
         }
         if (line.includes(common.readstart)) {
-          this.logger.info("snippet found");
           capture = true;
-          let s = new snip.Snippet(ext);
+          let id = extractID(line);
+          this.logger.info("snippet " + id + " found");
+          let s = new snip.Snippet(id, ext);
           fileSnips.push(s)
-          console.log(fileSnips);
         }
       });
       snippets.push(...fileSnips)
     }
-    console.log(snippets);
+    for (let j = 0; j<snippets.length; j++) {
+      snippets[j].fmt();
+    }
     return snippets;
+  }
+
+  async getInsertFilePaths() {
+    let writeDir = dirAppend(common.rootDir, this.config.target);
+    this.logger.info("loading insert file paths from " + writeDir);
+    let insertFilePaths = [];
+    for await (const entry of readdirp(writeDir)) {
+      const {path} = entry;
+      insertFilePaths.push({path});
+    }
+    return insertFilePaths;
+  }
+
+  async getInsertFiles(filePaths) {
+    this.logger.info("loading file lines for each insert file");
+    let files = [];
+    for (let i = 0; i < filePaths.length; i++) {
+      files.push(await this.getInsertFileLines(filePaths[i].path));
+    }
+    return files;
+  }
+
+  async getInsertFileLines(filename) {
+    let insertRootPath = dirAppend(common.rootDir, this.config.target);
+    let path = dirAppend(insertRootPath, filename);
+    let file = new splice.File(filename);
+    let fileLines = [];
+    await eachLineAsync(path, (line) => {
+      fileLines.push(line);
+    });
+    file.lines = fileLines;
+    return file;
+  }
+
+  async spliceSnippets(snippets, files) {
+    this.logger.info("starting splice operations");
+    for (let i = 0; i < snippets.length; i++) {
+      for (let f = 0; f< files.length; f++) {
+        files[f] = await this.getSplicedFile(snippets[i], files[f]);
+      }
+    }
+    return files;
+  }
+
+  async getSplicedFile(snippet, file) {
+    this.logger.info("looking for splice spots in " + file.filename);
+    let staticFile = file;
+    let dynamicFile = file;
+    let fileLineNumber = 1;
+    let lookForStop = false;
+    let spliceStart = 0;
+    for (let i = 0; i < staticFile.lines.length; i++) {
+      let line = file.lines[i];
+      if (line.includes(common.writestart)) {
+        let id = insertID(line);
+        if (id == snippet.id) {
+          spliceStart = fileLineNumber;
+          lookForStop = true
+        }
+      }
+      if (line.includes(common.writeend) && lookForStop) {
+        dynamicFile = await this.spliceFile(spliceStart, fileLineNumber, snippet, dynamicFile);
+        lookForStop = false;
+      }
+      fileLineNumber++;
+    }
+    return dynamicFile;
+  }
+
+  async spliceFile(start, end, snippet, file) {
+    let rmlines = end - start;
+    file.lines.splice(start, rmlines - 1, ...snippet.lines);
+    return file;
+  }
+
+  async writeFiles(files) {
+    let insertRootPath = dirAppend(common.rootDir, this.config.target);
+    for (let i = 0; i< files.length; i++) {
+      let file = files[i];
+      let fileString = file.lines.join("\n");
+      let writePath = dirAppend(insertRootPath, file.filename);
+      const raw = await writeAsync(writePath, fileString);
+    }
   }
 }
 
 function determineExtension(path) {
   let parts = path.split(".");
-  let index = parts.length - 1;
-  let ext = parts[index];
-  return ext;
+  return parts[parts.length - 1];
+}
+
+function extractID(line) {
+  let parts = line.split(" ");
+  return parts[parts.length - 1];
+}
+
+function insertID(line) {
+  let parts = line.split(" ")
+  let part = parts[parts.length - 1]
+  return part.replace("-->", "");
+}
+
+function dirAppend(root, dir) {
+  return root + "/" + dir;
 }
 
 module.exports.Sync = Sync;
