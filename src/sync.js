@@ -1,17 +1,18 @@
 const { Octokit } = require("@octokit/rest");
 const common = require('./common.js');
-const { writeFile, unlink, createReadStream } = require('fs');
+const { writeFile, unlink, createReadStream, rmdirSync } = require('fs');
 const { promisify } = require('util');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const unzipper = require('unzipper');
 const snip = require('./snippet.js');
-const splice = require('./splice.js');
+const fi = require('./file.js');
 const readdirp = require('readdirp');
 const { eachLine } = require('line-reader');
 
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
+const rmdirAsync = promisify(rmdirSync);
 
 class Sync {
   constructor(cfg, logger) {
@@ -25,13 +26,15 @@ class Sync {
   }
 
   async run() {
-    //await this.getRepos();
+    await this.getRepos();
     let extractfp = await this.getExtractionFilePaths();
     let snippets = await this.extractSnippets(extractfp);
     let insertfps = await this.getInsertFilePaths();
     let files = await this.getInsertFiles(insertfps);
     let filesToWrite = await this.spliceSnippets(snippets, files);
     await this.writeFiles(filesToWrite);
+    await this.cleanUp();
+
   }
 
   async getRepos() {
@@ -138,7 +141,7 @@ class Sync {
   async getInsertFileLines(filename) {
     let insertRootPath = dirAppend(common.rootDir, this.config.target);
     let path = dirAppend(insertRootPath, filename);
-    let file = new splice.File(filename);
+    let file = new fi.File(filename);
     let fileLines = [];
     await eachLineAsync(path, (line) => {
       fileLines.push(line);
@@ -158,7 +161,7 @@ class Sync {
   }
 
   async getSplicedFile(snippet, file) {
-    this.logger.info("looking for splice spots in " + file.filename);
+    this.logger.info("looking for splice spots in " + file.filename + " for " + snippet.id);
     let staticFile = file;
     let dynamicFile = file;
     let fileLineNumber = 1;
@@ -196,6 +199,17 @@ class Sync {
       let writePath = dirAppend(insertRootPath, file.filename);
       const raw = await writeAsync(writePath, fileString);
     }
+  }
+
+  async cleanUp() {
+    let options = {
+      recursive: true
+    }
+    await rmdirAsync(dirAppend(common.rootDir, common.extractionDir), options, (err) => {
+      if (err != null) {
+        console.log(err);
+      }
+    });
   }
 }
 

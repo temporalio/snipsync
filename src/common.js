@@ -2,7 +2,7 @@ const rootDir = process.cwd();
 
 module.exports.rootDir = rootDir;
 
-const cfgfile = "snippetsync/config.yaml";
+const cfgfile = "src/config.yaml";
 
 module.exports.cfgfile = cfgfile;
 
