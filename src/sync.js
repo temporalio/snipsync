@@ -34,7 +34,6 @@ class Sync {
     let filesToWrite = await this.spliceSnippets(snippets, files);
     await this.writeFiles(filesToWrite);
     await this.cleanUp();
-
   }
 
   async getRepos() {
@@ -67,6 +66,7 @@ class Sync {
     const result = await this.github.repos.downloadArchive({
       owner: origin.owner,
       repo: origin.repo,
+      ref: origin.ref,
       archive_format: "zipball"
     });
     return result.data
@@ -202,6 +202,7 @@ class Sync {
   }
 
   async cleanUp() {
+    this.logger.info("cleaning up downloads")
     let options = {
       recursive: true
     }
