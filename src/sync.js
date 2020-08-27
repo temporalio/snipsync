@@ -1,6 +1,6 @@
 const { Octokit } = require("@octokit/rest");
 const common = require('./common.js');
-const { writeFile, unlink, createReadStream, rmdirSync } = require('fs');
+const { writeFile, unlink, createReadStream } = require('fs');
 const { promisify } = require('util');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const unzipper = require('unzipper');
@@ -8,11 +8,12 @@ const snip = require('./snippet.js');
 const fi = require('./file.js');
 const readdirp = require('readdirp');
 const { eachLine } = require('line-reader');
+const rimraf = require('rimraf');
 
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
-const rmdirAsync = promisify(rmdirSync);
+const rimrafAsync = promisify(rimraf);
 
 class Sync {
   constructor(cfg, logger) {
@@ -202,15 +203,10 @@ class Sync {
   }
 
   async cleanUp() {
-    this.logger.info("cleaning up downloads")
-    let options = {
-      recursive: true
-    }
-    await rmdirAsync(dirAppend(common.rootDir, common.extractionDir), options, (err) => {
-      if (err != null) {
-        console.log(err);
-      }
-    });
+    this.logger.info("cleaning up downloads");
+    let path = dirAppend(common.rootDir, common.extractionDir);
+    rimrafAsync(path);
+    this.logger.info("cleanup complete");
   }
 }
 
