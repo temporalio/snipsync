@@ -6,12 +6,8 @@ description: Example markdown file with placeholder text
 
 Some text
 
-<!--START hellouniverse-->
-```go
-func HelloUniverse() {
-	fmt.Println("Hello Universe!")
-}
-```
+<!--START greeting-workflow-->
+
 <!--END-->
 
 Some text
@@ -19,7 +15,7 @@ Some text
 <!--START hellouniverse-->
 ```go
 func HelloUniverse() {
-	fmt.Println("Hello Universe!")
+  fmt.Println("Hello Universe!")
 }
 ```
 <!--END-->
@@ -29,7 +25,7 @@ Some text
 <!--START hellobacon-->
 ```go
 func HelloBacon() {
-	fmt.Println("Hello Bacon!")
+  fmt.Println("Hello Bacon!")
 }
 ```
 <!--END-->

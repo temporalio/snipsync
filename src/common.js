@@ -35,3 +35,9 @@ module.exports.writestart = writestart;
 const writeend = "<!--END";
 
 module.exports.writeend = writeend;
+
+function fmtProgressBar (message) {
+  return "⭐ " + "| {bar} | {percentage}% | {value}/{total} chunks | " + message;
+}
+
+module.exports.fmtProgressBar = fmtProgressBar;

@@ -9,7 +9,7 @@ origins:
     # ref:
   - owner: temporalio
     repo: go-samples
-    ref: ca568c85ccb41ba243c13427271f56350ae8aa7d
+    ref: 6880b0d09ddb6edf150e3095c90522602022578f
 
 # target is the local dir where the tool will look for files to write snippets to
 # default is docs

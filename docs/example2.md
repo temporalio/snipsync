@@ -9,7 +9,7 @@ Some text
 <!--START hellobacon-->
 ```go
 func HelloBacon() {
-	fmt.Println("Hello Bacon!")
+  fmt.Println("Hello Bacon!")
 }
 ```
 <!--END-->
@@ -17,7 +17,7 @@ func HelloBacon() {
 <!--START hellouniverse-->
 ```go
 func HelloUniverse() {
-	fmt.Println("Hello Universe!")
+  fmt.Println("Hello Universe!")
 }
 ```
 <!--END-->

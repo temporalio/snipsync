@@ -9,11 +9,13 @@ const fi = require('./file.js');
 const readdirp = require('readdirp');
 const { eachLine } = require('line-reader');
 const rimraf = require('rimraf');
+const progress = require ('cli-progress');
 
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
+const createReadStreamAsync = promisify(createReadStream);
 
 class Sync {
   constructor(cfg, logger) {
@@ -27,40 +29,55 @@ class Sync {
   }
 
   async run() {
+    // Download repo as zip file and extract to sync_repos directory
     await this.getRepos();
+    // Get the names of all the files in the sync_repos directory
     let extractfp = await this.getExtractionFilePaths();
+    // Search each file and scrape the snippets
     let snippets = await this.extractSnippets(extractfp);
+    // Get the names of all the files in the target directory
     let insertfps = await this.getInsertFilePaths();
+    // Create an object for each file in the target directory
     let files = await this.getInsertFiles(insertfps);
+    // Splice the snippets in the file objects
     let filesToWrite = await this.spliceSnippets(snippets, files);
+    // Overwrite the files to the target directory
     await this.writeFiles(filesToWrite);
+    // Delete the sync_repos directory
     await this.cleanUp();
+    this.logger.info("Snippet sync operation complete!");
   }
 
   async getRepos() {
     for (let i = 0; i < this.origins.length; i++) {
       let origin = this.origins[i];
-      this.logger.info("downloading repo: " + dirAppend(origin.owner, origin.repo));
+      const dlProgress = new progress.Bar({
+        format: common.fmtProgressBar("downloading repo " + dirAppend(origin.owner, origin.repo)),
+        barsize: 20
+      }, progress.Presets.shades_classic);
+      dlProgress.start(3, 0);
       let bytearray = await this.getArchive(origin);
+      dlProgress.increment();
       let filename = origin.repo + ".zip"
-      this.logger.info("saving as " + filename);
       let buffer = arrayBuffToBuff(bytearray);
       const raw = await writeAsync(filename, buffer);
+      dlProgress.increment();
       await this.unzip(filename);
+      dlProgress.increment();
+      dlProgress.stop();
     }
+    return;
   }
 
   async unzip(filename) {
     let zipPath = dirAppend(common.rootDir, filename);
     let unzipPath = dirAppend(common.rootDir, common.extractionDir);
-    this.logger.info("extracting to " + unzipPath);
     let result = await createReadStream(zipPath).pipe(
-      unzipper.Extract({
+      await unzipper.Extract({
         path: unzipPath
       })
     );
     await unlinkAsync(zipPath);
-    this.logger.info("extraction successful");
   }
 
   async getArchive(origin) {
@@ -70,25 +87,37 @@ class Sync {
       ref: origin.ref,
       archive_format: "zipball"
     });
-    return result.data
+    return result.data;
   }
 
   async getExtractionFilePaths() {
     let readDir = dirAppend(common.rootDir, common.extractionDir);
-    this.logger.info("loading extraction file paths from " + readDir);
+    const extractPathProgress = new progress.Bar({
+      format: common.fmtProgressBar("loading extraction file paths from " + readDir),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    extractPathProgress.start(1, 0);
     let filePaths = [];
     for await (const entry of readdirp(readDir)) {
       const {path} = entry;
-      filePaths.push({path})
+      filePaths.push({path});
+      extractPathProgress.setTotal(filePaths.length);
+      extractPathProgress.increment();
     }
+    extractPathProgress.stop();
     return filePaths;
   }
 
   async extractSnippets (filePaths) {
-    this.logger.info("extracting snippets from files");
+    const extractSnippetProgress = new progress.Bar({
+      format: common.fmtProgressBar("extracting snippets from files"),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    extractSnippetProgress.start(filePaths.length + 1, 0);
     let extractRootPath = dirAppend(common.rootDir, common.extractionDir);
     let snippets = [];
     for (let i = 0; i < filePaths.length; i++) {
+      extractSnippetProgress.increment();
       let item = filePaths[i];
       let ext = determineExtension(item.path);
       let path = dirAppend(extractRootPath, item.path);
@@ -106,7 +135,6 @@ class Sync {
         if (line.includes(common.readstart)) {
           capture = true;
           let id = extractID(line);
-          this.logger.info("snippet " + id + " found");
           let s = new snip.Snippet(id, ext);
           fileSnips.push(s)
         }
@@ -116,26 +144,41 @@ class Sync {
     for (let j = 0; j<snippets.length; j++) {
       snippets[j].fmt();
     }
+    extractSnippetProgress.increment();
+    extractSnippetProgress.stop();
     return snippets;
   }
 
   async getInsertFilePaths() {
     let writeDir = dirAppend(common.rootDir, this.config.target);
-    this.logger.info("loading insert file paths from " + writeDir);
+    const insertPathProgress = new progress.Bar({
+      format: common.fmtProgressBar("loading insert file paths from " + writeDir),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    insertPathProgress.start(1, 0);
     let insertFilePaths = [];
     for await (const entry of readdirp(writeDir)) {
       const {path} = entry;
       insertFilePaths.push({path});
+      insertPathProgress.setTotal(insertFilePaths.length);
+      insertPathProgress.increment();
     }
+    insertPathProgress.stop();
     return insertFilePaths;
   }
 
   async getInsertFiles(filePaths) {
-    this.logger.info("loading file lines for each insert file");
+    const getInsertFilesProgress = new progress.Bar({
+      format: common.fmtProgressBar("loading file lines for each insert file"),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    getInsertFilesProgress.start(filePaths.length, 0);
     let files = [];
     for (let i = 0; i < filePaths.length; i++) {
       files.push(await this.getInsertFileLines(filePaths[i].path));
+      getInsertFilesProgress.increment();
     }
+    getInsertFilesProgress.stop();
     return files;
   }
 
@@ -152,17 +195,22 @@ class Sync {
   }
 
   async spliceSnippets(snippets, files) {
-    this.logger.info("starting splice operations");
+    const spliceProgress = new progress.Bar({
+        format: common.fmtProgressBar("starting splice operations"),
+        barsize: 20
+    }, progress.Presets.shades_classic);
+    spliceProgress.start(snippets.length, 0);
     for (let i = 0; i < snippets.length; i++) {
+      spliceProgress.increment();
       for (let f = 0; f< files.length; f++) {
         files[f] = await this.getSplicedFile(snippets[i], files[f]);
       }
     }
+    spliceProgress.stop();
     return files;
   }
 
   async getSplicedFile(snippet, file) {
-    this.logger.info("looking for splice spots in " + file.filename + " for " + snippet.id);
     let staticFile = file;
     let dynamicFile = file;
     let fileLineNumber = 1;
@@ -194,19 +242,33 @@ class Sync {
 
   async writeFiles(files) {
     let insertRootPath = dirAppend(common.rootDir, this.config.target);
+    let writeFileProgress = new progress.Bar({
+      format: common.fmtProgressBar("writing files to " + insertRootPath),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    writeFileProgress.start(files.length, 0);
     for (let i = 0; i< files.length; i++) {
       let file = files[i];
       let fileString = file.lines.join("\n");
       let writePath = dirAppend(insertRootPath, file.filename);
       const raw = await writeAsync(writePath, fileString);
+      writeFileProgress.increment();
     }
+    writeFileProgress.stop();
+    return;
   }
 
   async cleanUp() {
-    this.logger.info("cleaning up downloads");
+    let cleanupProgress = new progress.Bar({
+      format: common.fmtProgressBar("cleaning up downloads"),
+      barsize: 20
+    }, progress.Presets.shades_classic);
+    cleanupProgress.start(1, 0);
     let path = dirAppend(common.rootDir, common.extractionDir);
     rimrafAsync(path);
-    this.logger.info("cleanup complete");
+    cleanupProgress.update(1);
+    cleanupProgress.stop();
+    return;
   }
 }
 
