@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "@octokit/rest": "^18.0.3",
+    "anzip": "^0.2.0",
     "arraybuffer-to-buffer": "^0.0.7",
     "cli-progress": "^3.8.2",
     "js-logger": "^1.6.0",
     "line-reader": "^0.4.0",
     "node-read-yaml": "^1.0.1",
     "readdirp": "^3.4.0",
-    "rimraf": "^3.0.2",
-    "unzipper": "^0.10.11"
+    "rimraf": "^3.0.2"
   }
 }

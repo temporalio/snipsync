@@ -3,7 +3,7 @@ const common = require('./common.js');
 const { writeFile, unlink, createReadStream } = require('fs');
 const { promisify } = require('util');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
-const unzipper = require('unzipper');
+const anzip = require('anzip');
 const snip = require('./snippet.js');
 const fi = require('./file.js');
 const readdirp = require('readdirp');
@@ -72,11 +72,7 @@ class Sync {
   async unzip(filename) {
     let zipPath = dirAppend(common.rootDir, filename);
     let unzipPath = dirAppend(common.rootDir, common.extractionDir);
-    let result = await createReadStream(zipPath).pipe(
-      await unzipper.Extract({
-        path: unzipPath
-      })
-    );
+    await anzip(zipPath, { outputPath: unzipPath });
     await unlinkAsync(zipPath);
   }
 
