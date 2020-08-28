@@ -6,7 +6,7 @@
   "repository": "git@github.com:temporalio/snippetsync.git",
   "author": "Cully Wakelin <cullywakelin@gmail.com>",
   "license": "MIT",
-  "private": true,
+  "private": false,
   "scripts": {
     "snipsync": "./src/index.js"
   },
