@@ -1,5 +1,5 @@
 {
-  "name": "snippetsync",
+  "name": "snipsync",
   "version": "0.0.001",
   "description": "Sync docs with github repo code snippets",
   "main": "index.js",
