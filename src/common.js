@@ -2,7 +2,7 @@ const rootDir = process.cwd();
 
 module.exports.rootDir = rootDir;
 
-const cfgfile = "src/config.yaml";
+const cfgfile = "src/config.yml";
 
 module.exports.cfgfile = cfgfile;
 
