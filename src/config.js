@@ -1,17 +1,11 @@
-const readcfg = require('node-read-yaml');
-const common = require('./common.js');
-
-const { GITHUB_AUTH_TOKEN } = process.env;
+const { join } = require('path');
+const { sync } = require('node-read-yaml');
+const { cfgFile, rootDir } = require('./common.js');
 
 function readConfig() {
-  if (!GITHUB_AUTH_TOKEN) {
-    throw new Error('Environment variable "GITHUB_AUTH_TOKEN" must be defined!');
-  }
-  dir = process.cwd()
-  path = dir + "/" + common.cfgfile
+  const cfgPath = join(rootDir, cfgFile);
   try {
-    const cfg = readcfg.sync(path);
-    cfg.auth = { token: GITHUB_AUTH_TOKEN };
+    const cfg = sync(cfgPath);
     return cfg
   } catch (err) {
     return err

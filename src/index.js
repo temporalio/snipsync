@@ -21,4 +21,9 @@ cfgProgress.update(1);
 cfgProgress.stop();
 
 synctron = new sync.Sync(cfg, logger);
-synctron.run();
+
+let err = synctron.run();
+if (err instanceof Error) {
+  logger.error("snipsync encountered an error and was unable to complete")
+  logger.error(err);
+}

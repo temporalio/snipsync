@@ -1,4 +1,4 @@
-# SnippetSync
+# SnipSync
 
 SnippetSync makes sure your documented code snippets are always in sync with your Github repo source files.
 
@@ -8,20 +8,44 @@ This tool requires [Node](https://nodejs.org/) and [Yarn](https://yarnpkg.com/).
 
 ## Install
 
-<TODO>
+**Yarn**:
+
+```bash
+yarn add snipsync
+```
 
 ## Configure
 
-### Config file
+### Package.json
 
-Edit the config.yaml file to specify Github repositories where the tool will look for source code snippets and to specify the local directory that contains the files to be spliced with the code snippets.
+In your `package.json` file, make sure the scripts section includes a reference to the module like this:
 
-Example config:
+```
+{
+  ...
+  scripts: [
+    ...
+    "snipsync": "./node_modules/snipsync/src/index.js"
+  ],
+  ...
+}
+```
+### Yaml config file
+
+Next, create a file called "snipsync_config.yml" in the project root. This file specifies the following:
+
+- The Github repositories where the tool will look for source code snippets.
+- The local directory that contains the files to be spliced with the code snippets.
+
+If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
+
+Example snipsync_config.yml:
 
 ```yaml
 origins:
   - owner: temporalio
     repo: go-samples
+    ref: 6880b0d09ddb6edf150e3095c90522602022578f
   - owner: temporalio
     repo: java-samples
 
@@ -55,7 +79,7 @@ In the example above, the "hellouniverse" code snippet will be spliced between t
 
 ## Run
 
-In your terminal, `cd` into the root directory of your project where the tool has been installed and run the following command:
+From the root directory of your project run the following command:
 
 ```bash
 yarn snipsync

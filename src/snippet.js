@@ -1,4 +1,7 @@
-const common = require('./common.js');
+const {
+  fmtStartCodeBlock,
+  markdownCodeTicks
+} = require('./common.js');
 
 class Snippet {
   constructor (id, ext) {
@@ -8,8 +11,8 @@ class Snippet {
   }
 
   fmt() {
-    this.lines.splice(0, 0, common.fmtStartCodeBlock(this.ext));
-    this.lines.splice(this.lines.length, 0, common.markdowncodeticks);
+    this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
+    this.lines.splice(this.lines.length, 0, markdownCodeTicks);
   }
 }
 
