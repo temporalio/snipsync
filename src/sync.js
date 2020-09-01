@@ -1,5 +1,7 @@
-const { join, extname } = require('path')
+const { join } = require('path')
 const { Octokit } = require('@octokit/rest');
+const { promisify } = require('util');
+const { eachLine } = require('line-reader');
 const {
   extractionDir,
   fmtProgressBar,
@@ -10,14 +12,17 @@ const {
   writeStart,
   writeEnd
 } = require('./common.js');
-const { writeFile, unlink, createReadStream } = require('fs');
-const { promisify } = require('util');
+const {
+  writeFile,
+  unlink,
+  createReadStream
+} = require('fs');
+
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
 const snip = require('./snippet.js');
 const fi = require('./file.js');
 const readdirp = require('readdirp');
-const { eachLine } = require('line-reader');
 const rimraf = require('rimraf');
 const progress = require ('cli-progress');
 
@@ -32,9 +37,7 @@ class Sync {
     this.config = cfg;
     this.origins = cfg.origins;
     this.logger = logger;
-    const octokit = new Octokit({
-      auth: "xyz"
-    })
+    const octokit = new Octokit()
     this.github = octokit;
   }
 
