@@ -1,6 +1,6 @@
 module.exports = {
   rootDir: process.cwd(),
-  cfgFile: 'snipsync_config.yml',
+  cfgFile: 'snipsync.config.yaml',
   extractionDir: 'sync_repos',
   markdownCodeTicks: '```',
   fmtStartCodeBlock: (ext) => '```' + ext,
