@@ -18,28 +18,14 @@ yarn add snipsync
 
 ### Package.json
 
-In your `package.json` file, make sure the scripts section includes a reference to the module like this:
-
-```
-{
-  ...
-  scripts: [
-    ...
-    "snipsync": "./node_modules/snipsync/src/index.js"
-  ],
-  ...
-}
-```
-### Yaml config file
-
-Next, create a file called "snipsync_config.yml" in the project root. This file specifies the following:
+Create a file called "snipsync.config.yaml" in the project root. This file specifies the following:
 
 - The Github repositories where the tool will look for source code snippets.
 - The local directory that contains the files to be spliced with the code snippets.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
 
-Example snipsync_config.yml:
+Example snipsync.config.yaml:
 
 ```yaml
 origins:
@@ -82,5 +68,6 @@ In the example above, the "hellouniverse" code snippet will be spliced between t
 From the root directory of your project run the following command:
 
 ```bash
-yarn snipsync
+snipsync
 ```
+
