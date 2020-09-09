@@ -8,5 +8,6 @@ module.exports = {
   readEnd: '@@@END',
   writeStart: '<!--START',
   writeEnd: '<!--END',
-  fmtProgressBar: (message) => '⭐ ' + `| {bar} | {percentage}% | {value}/{total} chunks | ${message}`
+  fmtProgressBar: (message) => `⭐ + | {bar} | {percentage}% | {value}/{total} chunks | ${message}`
 }
+

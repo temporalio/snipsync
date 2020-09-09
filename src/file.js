@@ -5,4 +5,5 @@ class File {
   }
 }
 
-module.exports.File = File;
+module.exports = { File };
+

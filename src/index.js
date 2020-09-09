@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 const logger = require('js-logger');
-const config = require ('./config.js');
-const sync = require ('./sync.js');
-const common = require ('./common.js');
+const config = require ('./config');
+const common = require ('./common');
+const { Sync } = require ('./Sync');
 
 logger.useDefaults();
 
-cfg = config.readconfig();
+const cfg = config.readConfig();
 
-synctron = new sync.Sync(cfg, logger);
+const synctron = new Sync(cfg, logger);
 
 synctron.run();
+

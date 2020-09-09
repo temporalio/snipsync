@@ -1,6 +1,6 @@
-# SnipSync
+# Snipsync
 
-SnipSync makes sure your documented code snippets are always in sync with your Github repo source files.
+Snipsync makes sure your documented code snippets are always in sync with your Github repo source files.
 
 ## Prerequisites
 

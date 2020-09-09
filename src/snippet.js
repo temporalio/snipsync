@@ -1,7 +1,7 @@
 const {
   fmtStartCodeBlock,
-  markdownCodeTicks
-} = require('./common.js');
+  markdownCodeTicks,
+} = require('./common');
 
 class Snippet {
   constructor (id, ext) {
@@ -16,4 +16,5 @@ class Snippet {
   }
 }
 
-module.exports.Snippet = Snippet;
+module.exports = { Snippet };
+

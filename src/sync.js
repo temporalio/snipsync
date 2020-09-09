@@ -2,6 +2,8 @@ const { join } = require('path')
 const { Octokit } = require('@octokit/rest');
 const { promisify } = require('util');
 const { eachLine } = require('line-reader');
+const { Snippet } = require('./Snippet');
+const { File } = require('./File');
 const {
   extractionDir,
   fmtProgressBar,
@@ -10,18 +12,15 @@ const {
   readEnd,
   rootDir,
   writeStart,
-  writeEnd
-} = require('./common.js');
+  writeEnd,
+} = require('./common');
 const {
   writeFile,
   unlink,
-  createReadStream
+  createReadStream,
 } = require('fs');
-
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
-const snip = require('./snippet.js');
-const fi = require('./file.js');
 const readdirp = require('readdirp');
 const rimraf = require('rimraf');
 const progress = require ('cli-progress');
@@ -80,7 +79,7 @@ class Sync {
         dlProgress.start(3, 0);
         let byteArray = await this.getArchive(owner, repo, ref);
         dlProgress.increment();
-        let fileName = `${repo}.zip`;
+        const fileName = `${repo}.zip`;
         let buffer = arrayBuffToBuff(byteArray);
         const raw = await writeAsync(fileName, buffer);
         dlProgress.increment();
@@ -93,8 +92,8 @@ class Sync {
   }
 
   async unzip(filename) {
-    let zipPath = join(rootDir, filename);
-    let unzipPath = join(rootDir, extractionDir);
+    const zipPath = join(rootDir, filename);
+    const unzipPath = join(rootDir, extractionDir);
     await anzip(zipPath, { outputPath: unzipPath });
     await unlinkAsync(zipPath);
     return;
@@ -111,7 +110,7 @@ class Sync {
   }
 
   async getExtractionFilePaths() {
-    let readDir = join(rootDir, extractionDir);
+    const readDir = join(rootDir, extractionDir);
     const extractPathProgress = new progress.Bar({
       format: fmtProgressBar('loading extraction file paths from ' + readDir),
       barsize: 20
@@ -134,7 +133,7 @@ class Sync {
       barsize: 20
     }, progress.Presets.shades_classic);
     extractSnippetProgress.start(filePaths.length + 1, 0);
-    let extractRootPath = join(rootDir, extractionDir);
+    const extractRootPath = join(rootDir, extractionDir);
     let snippets = [];
     for (let i = 0; i < filePaths.length; i++) {
       extractSnippetProgress.increment();
@@ -155,7 +154,7 @@ class Sync {
         if (line.includes(readStart)) {
           capture = true;
           let id = extractID(line);
-          let s = new snip.Snippet(id, ext);
+          let s = new Snippet(id, ext);
           fileSnips.push(s)
         }
       });
@@ -170,7 +169,7 @@ class Sync {
   }
 
   async getInsertFilePaths() {
-    let writeDir = join(rootDir, this.config.target);
+    const writeDir = join(rootDir, this.config.target);
     const insertPathProgress = new progress.Bar({
       format: fmtProgressBar('loading insert file paths from ' + writeDir),
       barsize: 20
@@ -203,9 +202,9 @@ class Sync {
   }
 
   async getInsertFileLines(filename) {
-    let insertRootPath = join(rootDir, this.config.target);
-    let path = join(insertRootPath, filename);
-    let file = new fi.File(filename);
+    const insertRootPath = join(rootDir, this.config.target);
+    const path = join(insertRootPath, filename);
+    let file = new File(filename);
     let fileLines = [];
     await eachLineAsync(path, (line) => {
       fileLines.push(line);
@@ -261,17 +260,16 @@ class Sync {
   }
 
   async writeFiles(files) {
-    let insertRootPath = join(rootDir, this.config.target);
-    let writeFileProgress = new progress.Bar({
+    const insertRootPath = join(rootDir, this.config.target);
+    const writeFileProgress = new progress.Bar({
       format: fmtProgressBar('writing files to ' + insertRootPath),
       barsize: 20
     }, progress.Presets.shades_classic);
     writeFileProgress.start(files.length, 0);
     for (let i = 0; i< files.length; i++) {
-      let file = files[i];
-      let fileString = file.lines.join('\n');
-      fileString = fileString + '\n';
-      let writePath = join(insertRootPath, file.filename);
+      const file = files[i];
+      const fileString = `${file.lines.join('\n')}\n`;
+      const writePath = join(insertRootPath, file.filename);
       const raw = await writeAsync(writePath, fileString);
       writeFileProgress.increment();
     }
@@ -289,7 +287,6 @@ class Sync {
     rimrafAsync(path);
     cleanupProgress.update(1);
     cleanupProgress.stop();
-    return;
   }
 }
 
@@ -310,3 +307,4 @@ function insertID(line) {
 }
 
 module.exports = { Sync };
+
