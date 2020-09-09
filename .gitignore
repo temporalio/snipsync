@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+
+# OS X temporary files
+.DS_Store
+.Trashes
+*.swp
+
+# Generated directory
+sync_repos
+
+# Test directory
+docs
+
+# Test operational config
+snipsync.config.yaml
+
+# Node stuff
+#
+# Logs
+log
+*.log
+npm-debug.log*
+

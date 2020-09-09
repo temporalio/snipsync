@@ -1,9 +1,28 @@
 {
-  "name": "snippetsync",
-  "version": "1.0.0",
+  "name": "snipsync",
+  "version": "0.0.2-beta.3",
   "description": "Sync docs with github repo code snippets",
   "main": "index.js",
   "repository": "git@github.com:temporalio/snippetsync.git",
-  "author": "Cully Wakelin <cullywakelin@gmail.com>",
-  "license": "MIT"
+  "author": "Cully Wakelin <cully@temporal.io>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "echo \"tests are not available\" && exit 1"
+  },
+  "dependencies": {
+    "@octokit/rest": "^18.0.3",
+    "anzip": "^0.2.0",
+    "arraybuffer-to-buffer": "^0.0.7",
+    "cli-progress": "^3.8.2",
+    "js-logger": "^1.6.0",
+    "line-reader": "^0.4.0",
+    "node-read-yaml": "^1.0.1",
+    "path": "^0.12.7",
+    "readdirp": "^3.4.0",
+    "rimraf": "^3.0.2"
+  },
+  "bin": {
+    "snipsync": "./src/index.js"
+  }
 }
