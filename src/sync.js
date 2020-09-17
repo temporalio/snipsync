@@ -297,7 +297,7 @@ function determineExtension(path) {
 
 function extractID(line) {
   let parts = line.split(' ');
-  return parts[parts.length - 1];
+  return parts[2];
 }
 
 function insertID(line) {
@@ -307,4 +307,3 @@ function insertID(line) {
 }
 
 module.exports = { Sync };
-
