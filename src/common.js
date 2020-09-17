@@ -4,10 +4,9 @@ module.exports = {
   extractionDir: 'sync_repos',
   markdownCodeTicks: '```',
   fmtStartCodeBlock: (ext) => '```' + ext,
-  readStart: '@@@START',
-  readEnd: '@@@END',
-  writeStart: '<!--START',
-  writeEnd: '<!--END',
+  readStart: '@@@SNIPSTART',
+  readEnd: '@@@SNIPEND',
+  writeStart: '<!--SNIPSTART',
+  writeEnd: '<!--SNIPEND',
   fmtProgressBar: (message) => `⭐ + | {bar} | {percentage}% | {value}/{total} chunks | ${message}`
 }
-
