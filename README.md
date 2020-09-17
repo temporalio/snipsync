@@ -43,11 +43,11 @@ target: docs
 In the source repo, wrap the code snippets in comments with a unique snippet identifier like this:
 
 ```go
-// @@@START hellouniverse
+// @@@SNIPSTART hellouniverse
 func HelloUniverse() {
 	fmt.Println("Hello Universe!")
 }
-// @@@END
+// @@@SNIPEND
 ```
 
 In the example above, "hellouniverse" is the unique identifier for the code snippet.
@@ -57,8 +57,8 @@ In the example above, "hellouniverse" is the unique identifier for the code snip
 In the target files wrap the location with comments that reference the identifier of the code snippet that will be placed there:
 
 ```md
-<!--START hellouniverse-->
-<!--END-->
+<!--SNIPSTART hellouniverse-->
+<!--SNIPEND-->
 ```
 
 In the example above, the "hellouniverse" code snippet will be spliced between the comments. Any text inside of the placeholders will be replaced by the code snippet when the tool runs. The tool will automatically specify the code type for markdown rendering. For example, if the source file ends in ".go" then the code section will be written like this: `` ```go ``
@@ -70,4 +70,3 @@ From the root directory of your project run the following command:
 ```bash
 snipsync
 ```
-
