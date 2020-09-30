@@ -4,6 +4,7 @@ const { promisify } = require('util');
 const { eachLine } = require('line-reader');
 const { Snippet } = require('./Snippet');
 const { File } = require('./File');
+const { Repo } = require('./Repo');
 const {
   extractionDir,
   fmtProgressBar,
@@ -41,20 +42,19 @@ class Sync {
   }
 
   async run() {
-    // Download repo as zip file and extract to sync_repos directory
-    await this.getRepos();
-
-    // Get the names of all the files in the sync_repos directory
-    let extractFP = await this.getExtractionFilePaths();
+    // Download repo as zip file.
+    // Extract to sync_repos directory.
+    // Get repository details and file paths.
+    const repositories = await this.getRepos();
 
     // Search each file and scrape the snippets
-    let snippets = await this.extractSnippets(extractFP);
+    let snippets = await this.extractSnippets(repositories);
 
     // Get the names of all the files in the target directory
-    let insertFP = await this.getInsertFilePaths();
+    let insertFP = await this.getTargetFilePaths();
 
     // Create an object for each file in the target directory
-    let files = await this.getInsertFiles(insertFP);
+    let files = await this.getTargetFiles(insertFP);
 
     // Splice the snippets in the file objects
     let filesToWrite = await this.spliceSnippets(snippets, files);
@@ -70,8 +70,10 @@ class Sync {
   }
 
   async getRepos() {
+    let repositories = [];
     await Promise.all(
       this.origins.map(async ({ owner, repo, ref }) => {
+        let repository = new Repo(owner, repo, ref);
         const dlProgress = new progress.Bar({
             format: fmtProgressBar(`downloading repo ${join(owner, repo)}`),
             barsize: 20,
@@ -83,20 +85,21 @@ class Sync {
         let buffer = arrayBuffToBuff(byteArray);
         const raw = await writeAsync(fileName, buffer);
         dlProgress.increment();
-        await this.unzip(fileName);
+        repository.filePaths = await this.unzip(fileName);
+        repositories.push(repository);
         dlProgress.increment();
         dlProgress.stop();
       })
     );
-    return;
+    return repositories;
   }
 
   async unzip(filename) {
     const zipPath = join(rootDir, filename);
     const unzipPath = join(rootDir, extractionDir);
-    await anzip(zipPath, { outputPath: unzipPath });
+    const { files } = await anzip(zipPath, { outputPath: unzipPath });
     await unlinkAsync(zipPath);
-    return;
+    return files;
   }
 
   async getArchive(owner, repo, ref) {
@@ -109,69 +112,56 @@ class Sync {
     return result.data;
   }
 
-  async getExtractionFilePaths() {
-    const readDir = join(rootDir, extractionDir);
-    const extractPathProgress = new progress.Bar({
-      format: fmtProgressBar('loading extraction file paths from ' + readDir),
-      barsize: 20
-    }, progress.Presets.shades_classic);
-    extractPathProgress.start(1, 0);
-    let filePaths = [];
-    for await (const entry of readdirp(readDir)) {
-      const {path} = entry;
-      filePaths.push({path});
-      extractPathProgress.setTotal(filePaths.length);
-      extractPathProgress.increment();
-    }
-    extractPathProgress.stop();
-    return filePaths;
-  }
-
-  async extractSnippets (filePaths) {
-    const extractSnippetProgress = new progress.Bar({
-      format: fmtProgressBar('extracting snippets from files'),
-      barsize: 20
-    }, progress.Presets.shades_classic);
-    extractSnippetProgress.start(filePaths.length + 1, 0);
-    const extractRootPath = join(rootDir, extractionDir);
+  async extractSnippets (repositories) {
     let snippets = [];
-    for (let i = 0; i < filePaths.length; i++) {
-      extractSnippetProgress.increment();
-      let item = filePaths[i];
-      let ext = determineExtension(item.path);
-      let path = join(extractRootPath, item.path);
-      let capture = false;
-      let fileSnipsCount = 0;
-      let fileSnips = [];
-      await eachLineAsync(path, (line) => {
-        if (line.includes(readEnd)) {
-          capture = false;
-          fileSnipsCount++;
+    await Promise.all(
+      repositories.map(async ({ owner, repo, ref, filePaths }) => {
+        const extractSnippetProgress = new progress.Bar({
+          format: fmtProgressBar(`extracting snippets from ${repo}`),
+          barsize: 20
+        }, progress.Presets.shades_classic);
+        extractSnippetProgress.start(filePaths.length + 1, 0);
+        const extractRootPath = join(rootDir, extractionDir);
+        for (let i = 0; i < filePaths.length; i++) {
+          extractSnippetProgress.increment();
+          let item = filePaths[i];
+          let ext = determineExtension(item.name);
+          let path = join(item.directory, item.name);
+          path = join(extractRootPath, path);
+          let capture = false;
+          let fileSnipsCount = 0;
+          let fileSnips = [];
+          await eachLineAsync(path, (line) => {
+            if (line.includes(readEnd)) {
+              capture = false;
+              fileSnipsCount++;
+            }
+            if (capture) {
+              fileSnips[fileSnipsCount].lines.push(line);
+            }
+            if (line.includes(readStart)) {
+              capture = true;
+              let id = extractID(line);
+              let s = new Snippet(id, ext, owner, repo, ref, item);
+              fileSnips.push(s)
+            }
+          });
+          snippets.push(...fileSnips)
         }
-        if (capture) {
-          fileSnips[fileSnipsCount].lines.push(line);
-        }
-        if (line.includes(readStart)) {
-          capture = true;
-          let id = extractID(line);
-          let s = new Snippet(id, ext);
-          fileSnips.push(s)
-        }
-      });
-      snippets.push(...fileSnips)
-    }
+        extractSnippetProgress.increment();
+        extractSnippetProgress.stop();
+      })
+    );
     for (let j = 0; j<snippets.length; j++) {
       snippets[j].fmt();
     }
-    extractSnippetProgress.increment();
-    extractSnippetProgress.stop();
     return snippets;
   }
 
-  async getInsertFilePaths() {
+  async getTargetFilePaths() {
     const writeDir = join(rootDir, this.config.target);
     const insertPathProgress = new progress.Bar({
-      format: fmtProgressBar('loading insert file paths from ' + writeDir),
+      format: fmtProgressBar('loading target file paths from ' + writeDir),
       barsize: 20
     }, progress.Presets.shades_classic);
     insertPathProgress.start(1, 0);
@@ -186,7 +176,7 @@ class Sync {
     return insertFilePaths;
   }
 
-  async getInsertFiles(filePaths) {
+  async getTargetFiles(filePaths) {
     const getInsertFilesProgress = new progress.Bar({
       format: fmtProgressBar('loading file lines for each insert file'),
       barsize: 20
@@ -194,14 +184,14 @@ class Sync {
     getInsertFilesProgress.start(filePaths.length, 0);
     let files = [];
     for (let i = 0; i < filePaths.length; i++) {
-      files.push(await this.getInsertFileLines(filePaths[i].path));
+      files.push(await this.getTargetFileLines(filePaths[i].path));
       getInsertFilesProgress.increment();
     }
     getInsertFilesProgress.stop();
     return files;
   }
 
-  async getInsertFileLines(filename) {
+  async getTargetFileLines(filename) {
     const insertRootPath = join(rootDir, this.config.target);
     const path = join(insertRootPath, filename);
     let file = new File(filename);
