@@ -117,7 +117,7 @@ class Sync {
     await Promise.all(
       repositories.map(async ({ owner, repo, ref, filePaths }) => {
         const extractSnippetProgress = new progress.Bar({
-          format: fmtProgressBar('extracting snippets from files'),
+          format: fmtProgressBar(`extracting snippets from ${repo}`),
           barsize: 20
         }, progress.Presets.shades_classic);
         extractSnippetProgress.start(filePaths.length + 1, 0);
@@ -161,7 +161,7 @@ class Sync {
   async getTargetFilePaths() {
     const writeDir = join(rootDir, this.config.target);
     const insertPathProgress = new progress.Bar({
-      format: fmtProgressBar('loading insert file paths from ' + writeDir),
+      format: fmtProgressBar('loading target file paths from ' + writeDir),
       barsize: 20
     }, progress.Presets.shades_classic);
     insertPathProgress.start(1, 0);
@@ -184,14 +184,14 @@ class Sync {
     getInsertFilesProgress.start(filePaths.length, 0);
     let files = [];
     for (let i = 0; i < filePaths.length; i++) {
-      files.push(await this.getInsertFileLines(filePaths[i].path));
+      files.push(await this.getTargetFileLines(filePaths[i].path));
       getInsertFilesProgress.increment();
     }
     getInsertFilesProgress.stop();
     return files;
   }
 
-  async getInsertFileLines(filename) {
+  async getTargetFileLines(filename) {
     const insertRootPath = join(rootDir, this.config.target);
     const path = join(insertRootPath, filename);
     let file = new File(filename);
