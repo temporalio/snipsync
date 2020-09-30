@@ -22,18 +22,18 @@ class Snippet {
 
   fmtSourceLink() {
 
-    let sourceURLParts = this.filePath.directory.split("/");
-    sourceURLParts.shift();
-    let ref = ""
-    if (this.ref != "" && this.ref != undefined) {
-      ref = this.ref;
-    } else {
-      ref = "master";
-    }
-    sourceURLParts.unshift("https://github.com", this.owner, this.repo, "blob", ref);
-    sourceURLParts.push(this.filePath.name);
-    let sourceURL = sourceURLParts.join("/");
-    let link = "[View source file](" + sourceURL + ")";
+    let sourceURLParts = this.filePath.directory.split('/');
+    const ref = this?.ref || 'master';
+    const sourceURL = [
+      'https://github.com',
+      this.owner,
+      this.repo,
+      "blob",
+      ref,
+      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      this.filePath.name
+    ].join('/');
+    let link = '[View source file](' + sourceURL + ')';
     return link;
   }
 }

@@ -45,7 +45,7 @@ class Sync {
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
-    let repositories = await this.getRepos();
+    const repositories = await this.getRepos();
 
     // Search each file and scrape the snippets
     let snippets = await this.extractSnippets(repositories);
@@ -97,9 +97,9 @@ class Sync {
   async unzip(filename) {
     const zipPath = join(rootDir, filename);
     const unzipPath = join(rootDir, extractionDir);
-    let output = await anzip(zipPath, { outputPath: unzipPath });
+    const { files } = await anzip(zipPath, { outputPath: unzipPath });
     await unlinkAsync(zipPath);
-    return output.files;
+    return files;
   }
 
   async getArchive(owner, repo, ref) {
@@ -148,13 +148,13 @@ class Sync {
           });
           snippets.push(...fileSnips)
         }
-        for (let j = 0; j<snippets.length; j++) {
-          snippets[j].fmt();
-        }
         extractSnippetProgress.increment();
         extractSnippetProgress.stop();
       })
     );
+    for (let j = 0; j<snippets.length; j++) {
+      snippets[j].fmt();
+    }
     return snippets;
   }
 
