@@ -23,7 +23,12 @@ class Snippet {
   fmtSourceLink() {
 
     let sourceURLParts = this.filePath.directory.split('/');
-    const ref = this?.ref || 'master';
+    let ref = ""
+    if (this.ref != "" && this.ref != undefined) {
+      ref = this.ref;
+    } else {
+      ref = "master";
+    }
     const sourceURL = [
       'https://github.com',
       this.owner,
