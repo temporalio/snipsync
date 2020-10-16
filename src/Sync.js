@@ -69,6 +69,14 @@ class Sync {
     return;
   }
 
+  async clear() {
+    let filePaths = await this.getTargetFilePaths();
+    let files = await this.getTargetFiles(filePaths);
+    let filesToWrite = await this.clearSnippets(files);
+    await this.writeFiles(filesToWrite);
+    this.logger.info('Snippets have been cleared.')
+  }
+
   async getRepos() {
     let repositories = [];
     await Promise.all(
@@ -246,6 +254,39 @@ class Sync {
   async spliceFile(start, end, snippet, file) {
     let rmlines = end - start;
     file.lines.splice(start, rmlines - 1, ...snippet.lines);
+    return file;
+  }
+
+  async clearSnippets(files) {
+    const clearProgress = new progress.Bar({
+        format: fmtProgressBar('starting clear operations'),
+        barsize: 20
+    }, progress.Presets.shades_classic);
+    clearProgress.start(files.length, 0);
+    for (let f = 0; f< files.length; f++) {
+      files[f] = await this.getClearedFile(files[f]);
+      clearProgress.increment();
+    }
+    clearProgress.stop();
+    return files;
+  }
+
+  async getClearedFile(file) {
+    let omit = false
+    let newFileLines = []
+    for (let i = 0; i < file.lines.length; i++) {
+      let line = file.lines[i];
+      if (line.includes(writeEnd)) {
+        omit = false;
+      }
+      if(!omit){
+        newFileLines.push(line);
+      }
+      if (line.includes(writeStart)) {
+        omit = true;
+      }
+    }
+    file.lines = newFileLines;
     return file;
   }
 
