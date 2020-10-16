@@ -14,14 +14,31 @@ class Snippet {
     this.lines = [];
   }
 
-  fmt() {
+  fmt(fmtSourceLink) {
     this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
     this.lines.splice(this.lines.length, 0, markdownCodeTicks);
-    this.lines.splice(this.lines.length, 0, this.fmtSourceLink());
+    if(fmtSourceLink) {
+      this.lines.splice(0, 0, this.fmtSourceLink());
+    }
   }
 
   fmtSourceLink() {
+    const url = this.buildURL();
+    const path = this.buildPath();
+    let link = `[${path}](${url})`;
+    return link;
+  }
 
+  buildPath() {
+    let sourceURLParts = this.filePath.directory.split('/');
+    let path = [
+      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      this.filePath.name
+    ].join('/');
+    return path;
+  }
+
+  buildURL() {
     let sourceURLParts = this.filePath.directory.split('/');
     let ref = ""
     if (this.ref != "" && this.ref != undefined) {
@@ -29,7 +46,7 @@ class Snippet {
     } else {
       ref = "master";
     }
-    const sourceURL = [
+    const url = [
       'https://github.com',
       this.owner,
       this.repo,
@@ -38,8 +55,7 @@ class Snippet {
       ...(sourceURLParts.slice(1, sourceURLParts.length)),
       this.filePath.name
     ].join('/');
-    let link = '[View source file](' + sourceURL + ')';
-    return link;
+    return url
   }
 }
 

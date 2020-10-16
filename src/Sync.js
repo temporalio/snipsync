@@ -153,7 +153,7 @@ class Sync {
       })
     );
     for (let j = 0; j<snippets.length; j++) {
-      snippets[j].fmt();
+      snippets[j].fmt(this.config.features.enable_source_link);
     }
     return snippets;
   }

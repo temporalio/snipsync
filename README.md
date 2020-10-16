@@ -36,6 +36,9 @@ origins:
     repo: java-samples
 
 target: docs
+
+features:
+  enable_source_link: true
 ```
 
 ### Source code
