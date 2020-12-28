@@ -1,12 +1,10 @@
-#!/usr/bin/env node
-const logger = require('js-logger');
-const config = require ('./config');
-const common = require ('./common');
-const { Sync } = require ('./Sync');
+import logger from 'js-logger';
+import { readConfig } from './src/config';
+import Sync from './src/Sync';
 
 logger.useDefaults();
 const args = process.argv.slice(2);
-const cfg = config.readConfig();
+const cfg = readConfig();
 const synctron = new Sync(cfg, logger);
 
 switch (args[0]) {
