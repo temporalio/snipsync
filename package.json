@@ -10,13 +10,10 @@
   "scripts": {
     "test": "echo \"tests are not available\" && exit 1",
     "build": "tsc",
-    "dev": "ts-node index.ts",
-    "start": "nodemon ./dist/index.js",
-    "prod": "yarn build && yarn start"
+    "dev": "ts-node index.ts"
   },
   "dependencies": {
     "@octokit/rest": "^18.0.3",
-    "@octokit/types": "^6.1.1",
     "anzip": "^0.2.0",
     "arraybuffer-to-buffer": "^0.0.7",
     "cli-progress": "^3.8.2",
