@@ -1,18 +1,20 @@
 import { fmtStartCodeBlock, markdownCodeTicks } from '../common';
 
   interface FilePath {
-
+    name: string;
+    directory: any;
+    saved: boolean;
   }
   
   export default class Snippet {
-    id: any;
-    ext: any;
-    owner: any;
-    repo: any;
-    ref: any;
-    filePath: any;
-    lines: any;
-    constructor (id: any, ext: any, owner: any, repo: any, ref: any, filePath: any) {
+    id: string;
+    ext: string;
+    owner: string;
+    repo: string;
+    ref: string;
+    filePath: FilePath;
+    lines: string[];
+    constructor (id: string, ext: string, owner: string, repo: string, ref: string, filePath: FilePath) {
       this.id = id;
       this.ext = ext;
       this.owner = owner;

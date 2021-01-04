@@ -1,5 +1,3 @@
-
-import { GetResponseDataTypeFromEndpointMethod } from "@octokit/types";
 import {join} from 'path';
 import { Octokit } from "@octokit/rest";
 import { promisify } from "util";
@@ -8,25 +6,26 @@ import Snippet from "./classes/Snippet";
 import File from "./classes/File";
 import Repo from "./classes/Repo";
 import { extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } from "./common";
-import { writeFile, unlink, createReadStream } from "fs";
+import { writeFile, unlink } from "fs";
 import arrayBuffToBuff from "arraybuffer-to-buffer";
 import anzip from "anzip";
 import readdirp from "readdirp";
 import rimraf from "rimraf";
 import progress from "cli-progress";
+import { ILogger } from 'js-logger';
+import { ConfigType, Origins } from '../types'
 
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
-const createReadStreamAsync = promisify(createReadStream);
 
 export default class Sync {
-    config: any;
-    origins: any;
-    logger: any;
+    config: ConfigType;
+    origins: Origins[];
+    logger: ILogger;
     github: any;
-    constructor(cfg, logger) {
+    constructor(cfg: ConfigType, logger: ILogger) {
       this.config = cfg;
       this.origins = cfg.origins;
       this.logger = logger;
@@ -42,6 +41,7 @@ export default class Sync {
 
         // Search each file and scrape the snippets
         let snippets = await this.extractSnippets(repositories);
+
         // Get the names of all the files in the target directory
         let insertFP = await this.getTargetFilePaths();
     
@@ -148,7 +148,7 @@ export default class Sync {
             }
             if (line.includes(readStart)) {
               capture = true;
-              let id = extractID(line);
+              let id = extractID(line).trim();
               let s = new Snippet(id, ext, owner, repo, ref, item);
               fileSnips.push(s);
             }
@@ -319,7 +319,7 @@ export default class Sync {
       const file = files[i];
       const fileString = `${file.lines.join("\n")}\n`;
       const writePath = join(insertRootPath, file.filename);
-      const raw = await writeAsync(writePath, fileString);
+      await writeAsync(writePath, fileString);
       writeFileProgress.increment();
     }
     writeFileProgress.stop();
@@ -348,8 +348,7 @@ function determineExtension(path) {
   }
   
   function extractID(line) {
-    let parts = line.split(" ");
-    return parts[2];
+    return line.match(/@SNIPSTART(.*)/)[1];
   }
   
   function insertID(line) {
