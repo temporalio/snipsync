@@ -1,4 +1,4 @@
-name: workflow
+name: tslint check
 on: [push]
 jobs:
   job:
