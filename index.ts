@@ -9,7 +9,7 @@ const synctron = new Sync(cfg, logger);
 
 switch (args[0]) {
   case '--clear':
-    synctron.clear()
+    synctron.clear();
     break;
   default:
     synctron.run();

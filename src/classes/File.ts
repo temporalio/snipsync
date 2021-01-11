@@ -6,5 +6,4 @@ export default class File {
       this.lines = [];
     }
   }
-  
-  
+

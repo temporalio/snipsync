@@ -1,11 +1,6 @@
 import { fmtStartCodeBlock, markdownCodeTicks } from '../common';
+import { FilePath } from '../../types';
 
-  interface FilePath {
-    name: string;
-    directory: any;
-    saved: boolean;
-  }
-  
   export default class Snippet {
     id: string;
     ext: string;
@@ -23,7 +18,7 @@ import { fmtStartCodeBlock, markdownCodeTicks } from '../common';
       this.filePath = filePath;
       this.lines = [];
     }
-  
+
     fmt(fmtSourceLink: string) {
       this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
       this.lines.splice(this.lines.length, 0, markdownCodeTicks);
@@ -31,27 +26,27 @@ import { fmtStartCodeBlock, markdownCodeTicks } from '../common';
         this.lines.splice(0, 0, this.fmtSourceLink());
       }
     }
-  
+
     fmtSourceLink() {
       const url: string = this.buildURL();
       const path: string = this.buildPath();
-      let link: string = `[${path}](${url})`;
+      const link: string = `[${path}](${url})`;
       return link;
     }
-  
+
     buildPath() {
-      let sourceURLParts: string = this.filePath.directory.split('/');
-      let path: string = [
+      const sourceURLParts: string[] = this.filePath.directory.split('/');
+      const path: string = [
         ...(sourceURLParts.slice(1, sourceURLParts.length)),
-        this.filePath.name
+        this.filePath.name,
       ].join('/');
       return path;
     }
-  
+
     buildURL() {
-      let sourceURLParts: string[] = this.filePath.directory.split('/');
-      let ref: string = ""
-      if (this.ref != "" && this.ref != undefined) {
+      const sourceURLParts: string[] = this.filePath.directory.split('/');
+      let ref: string = "";
+      if (this.ref !== "" && this.ref !== undefined) {
         ref = this.ref;
       } else {
         ref = "master";
@@ -63,8 +58,8 @@ import { fmtStartCodeBlock, markdownCodeTicks } from '../common';
         "blob",
         ref,
         ...(sourceURLParts.slice(1, sourceURLParts.length)),
-        this.filePath.name
+        this.filePath.name,
       ].join('/');
-      return url
+      return url;
     }
   }

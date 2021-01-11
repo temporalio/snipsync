@@ -13,3 +13,9 @@ export interface ConfigType {
     target: string;
     features: Features;
 }
+
+export interface FilePath {
+    name: string;
+    directory: string;
+    saved: boolean;
+  }

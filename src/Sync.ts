@@ -13,7 +13,7 @@ import readdirp from "readdirp";
 import rimraf from "rimraf";
 import progress from "cli-progress";
 import { ILogger } from 'js-logger';
-import { ConfigType, Origins } from '../types'
+import { ConfigType, Origins } from '../types';
 
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
@@ -40,40 +40,40 @@ export default class Sync {
         const repositories = await this.getRepos();
 
         // Search each file and scrape the snippets
-        let snippets = await this.extractSnippets(repositories);
+        const snippets = await this.extractSnippets(repositories);
 
         // Get the names of all the files in the target directory
-        let insertFP = await this.getTargetFilePaths();
-    
+        const insertFP = await this.getTargetFilePaths();
+
         // Create an object for each file in the target directory
-        let files = await this.getTargetFiles(insertFP);
-    
+        const files = await this.getTargetFiles(insertFP);
+
         // Splice the snippets in the file objects
-        let filesToWrite = await this.spliceSnippets(snippets, files);
-    
+        const filesToWrite = await this.spliceSnippets(snippets, files);
+
         // Overwrite the files to the target directory
         await this.writeFiles(filesToWrite);
-    
+
         // Delete the sync_repos directory
         await this.cleanUp();
-    
+
         this.logger.info("Snippet sync operation complete!");
         return;
       }
 
       async clear() {
-        let filePaths = await this.getTargetFilePaths();
-        let files = await this.getTargetFiles(filePaths);
-        let filesToWrite = await this.clearSnippets(files);
+        const filePaths = await this.getTargetFilePaths();
+        const files = await this.getTargetFiles(filePaths);
+        const filesToWrite = await this.clearSnippets(files);
         await this.writeFiles(filesToWrite);
         this.logger.info("Snippets have been cleared.");
       }
 
       async getRepos() {
-        let repositories = [];
+        const repositories = [];
         await Promise.all(
           this.origins.map(async ({ owner, repo, ref }) => {
-            let repository = new Repo(owner, repo, ref);
+            const repository = new Repo(owner, repo, ref);
             const dlProgress = new progress.Bar(
               {
                 format: fmtProgressBar(`downloading repo ${join(owner, repo)}`),
@@ -82,11 +82,11 @@ export default class Sync {
               progress.Presets.shades_classic
             );
             dlProgress.start(3, 0);
-            let byteArray = await this.getArchive(owner, repo, ref);
+            const byteArray = await this.getArchive(owner, repo, ref);
             dlProgress.increment();
             const fileName = `${repo}.zip`;
-            let buffer = arrayBuffToBuff(byteArray);
-            const raw = await writeAsync(fileName, buffer);
+            const buffer = arrayBuffToBuff(byteArray);
+            await writeAsync(fileName, buffer);
             dlProgress.increment();
             repository.filePaths = await this.unzip(fileName);
             repositories.push(repository);
@@ -104,19 +104,19 @@ export default class Sync {
         await unlinkAsync(zipPath);
         return files;
       }
-    
+
       async getArchive(owner, repo, ref) {
         const result = await this.github.repos.downloadArchive({
-          owner: owner,
-          repo: repo,
-          ref: ref,
+          owner,
+          repo,
+          ref,
           archive_format: "zipball",
         });
         return result.data;
       }
-    
+
   async extractSnippets(repositories) {
-    let snippets = [];
+    const snippets = [];
     await Promise.all(
       repositories.map(async ({ owner, repo, ref, filePaths }) => {
         const extractSnippetProgress = new progress.Bar(
@@ -128,16 +128,14 @@ export default class Sync {
         );
         extractSnippetProgress.start(filePaths.length + 1, 0);
         const extractRootPath = join(rootDir, extractionDir);
-        for (let i = 0; i < filePaths.length; i++) {
+        for (const item of filePaths) {
           extractSnippetProgress.increment();
-          let item = filePaths[i];
-          let ext = determineExtension(item.name);
+          const ext = determineExtension(item.name);
           let path = join(item.directory, item.name);
           path = join(extractRootPath, path);
           let capture = false;
           let fileSnipsCount = 0;
-        
-          let fileSnips = [];
+          const fileSnips = [];
           await eachLineAsync(path, (line: string) => {
             if (line.includes(readEnd)) {
               capture = false;
@@ -148,9 +146,9 @@ export default class Sync {
             }
             if (line.includes(readStart)) {
               capture = true;
-              let id = extractID(line).trim();
-              let s = new Snippet(id, ext, owner, repo, ref, item);
-              fileSnips.push(s);
+              const id = extractID(line).trim();
+              const snip = new Snippet(id, ext, owner, repo, ref, item);
+              fileSnips.push(snip);
             }
           });
           snippets.push(...fileSnips);
@@ -159,8 +157,8 @@ export default class Sync {
         extractSnippetProgress.stop();
       })
     );
-    for (let j = 0; j < snippets.length; j++) {
-      snippets[j].fmt(this.config.features.enable_source_link);
+    for (const snippet of snippets) {
+      snippet.fmt(this.config.features.enable_source_link);
     }
     return snippets;
   }
@@ -175,7 +173,7 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     insertPathProgress.start(1, 0);
-    let insertFilePaths = [];
+    const insertFilePaths = [];
     for await (const entry of readdirp(writeDir)) {
       const { path } = entry;
       insertFilePaths.push({ path });
@@ -195,9 +193,9 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     getInsertFilesProgress.start(filePaths.length, 0);
-    let files = [];
-    for (let i = 0; i < filePaths.length; i++) {
-      files.push(await this.getTargetFileLines(filePaths[i].path));
+    const files = [];
+    for (const filePath of filePaths) {
+      files.push(await this.getTargetFileLines(filePath.path));
       getInsertFilesProgress.increment();
     }
     getInsertFilesProgress.stop();
@@ -207,8 +205,8 @@ export default class Sync {
   async getTargetFileLines(filename) {
     const insertRootPath = join(rootDir, this.config.target);
     const path = join(insertRootPath, filename);
-    let file = new File(filename);
-    let fileLines = [];
+    const file = new File(filename);
+    const fileLines = [];
     await eachLineAsync(path, (line) => {
       fileLines.push(line);
     });
@@ -225,26 +223,26 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     spliceProgress.start(snippets.length, 0);
-    for (let i = 0; i < snippets.length; i++) {
+    for (const snippet of snippets) {
       spliceProgress.increment();
-      for (let f = 0; f < files.length; f++) {
-        files[f] = await this.getSplicedFile(snippets[i], files[f]);
+      for (let file of files) {
+        file = await this.getSplicedFile(snippet, file);
       }
     }
     spliceProgress.stop();
     return files;
   }
   async getSplicedFile(snippet, file) {
-    let staticFile = file;
+    const staticFile = file;
     let dynamicFile = file;
     let fileLineNumber = 1;
     let lookForStop = false;
     let spliceStart = 0;
-    for (let i = 0; i < staticFile.lines.length; i++) {
-      let line = file.lines[i];
+    for (let [idx, _] of staticFile.lines.entries()) {
+      const line = file.lines[idx];
       if (line.includes(writeStart)) {
-        let id = insertID(line);
-        if (id == snippet.id) {
+        const id = insertID(line);
+        if (id === snippet.id) {
           spliceStart = fileLineNumber;
           lookForStop = true;
         }
@@ -264,7 +262,7 @@ export default class Sync {
   }
 
   async spliceFile(start, end, snippet, file) {
-    let rmlines = end - start;
+    const rmlines = end - start;
     file.lines.splice(start, rmlines - 1, ...snippet.lines);
     return file;
   }
@@ -278,8 +276,8 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     clearProgress.start(files.length, 0);
-    for (let f = 0; f < files.length; f++) {
-      files[f] = await this.getClearedFile(files[f]);
+    for (let file of files) {
+      file = await this.getClearedFile(file);
       clearProgress.increment();
     }
     clearProgress.stop();
@@ -288,9 +286,8 @@ export default class Sync {
 
   async getClearedFile(file) {
     let omit = false;
-    let newFileLines = [];
-    for (let i = 0; i < file.lines.length; i++) {
-      let line = file.lines[i];
+    const newFileLines = [];
+    for (const line of file.lines) {
       if (line.includes(writeEnd)) {
         omit = false;
       }
@@ -315,8 +312,7 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     writeFileProgress.start(files.length, 0);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (const file of files) {
       const fileString = `${file.lines.join("\n")}\n`;
       const writePath = join(insertRootPath, file.filename);
       await writeAsync(writePath, fileString);
@@ -327,7 +323,7 @@ export default class Sync {
   }
 
   async cleanUp() {
-    let cleanupProgress = new progress.Bar(
+    const cleanupProgress = new progress.Bar(
       {
         format: fmtProgressBar("cleaning up downloads"),
         barsize: 20,
@@ -335,7 +331,7 @@ export default class Sync {
       progress.Presets.shades_classic
     );
     cleanupProgress.start(1, 0);
-    let path = join(rootDir, extractionDir);
+    const path = join(rootDir, extractionDir);
     rimrafAsync(path);
     cleanupProgress.update(1);
     cleanupProgress.stop();
@@ -343,18 +339,17 @@ export default class Sync {
 }
 
 function determineExtension(path) {
-    let parts = path.split(".");
+    const parts = path.split(".");
     return parts[parts.length - 1];
   }
-  
+
   function extractID(line) {
-    return line.match(/@SNIPSTART(.*)/)[1];
+    const parts = line.split(' ');
+    return parts[2];
   }
-  
+
   function insertID(line) {
-    let parts = line.split(" ");
-    let part = parts[parts.length - 1];
+    const parts = line.split(" ");
+    const part = parts[parts.length - 1];
     return part.replace("-->", "");
   }
-  
-  
