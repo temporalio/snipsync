@@ -13,4 +13,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           pattern: "*.ts"
-          config: .eslintrc.yml
+          config: eslintrc.yml
