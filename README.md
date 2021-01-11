@@ -24,9 +24,8 @@ Create a file called "snipsync.config.yaml" in the project root. This file speci
 - The local directory that contains the files to be spliced with the code snippets.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
-If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
 
-Example of complete snipsync.config.yaml:
+Example snipsync.config.yaml:
 
 ```yaml
 origins:
@@ -40,16 +39,6 @@ target: docs
 
 features:
   enable_source_link: true
-```
-
-Example of bare minimum snipsync.config.yaml:
-
-```yaml
-origins:
-  - owner: temporalio
-    repo: go-samples
-
-target: docs
 ```
 
 ### Source code
