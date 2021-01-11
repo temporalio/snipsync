@@ -1,4 +1,4 @@
-name: tslint check
+name: eslint check
 on: [push]
 jobs:
   job:
@@ -12,5 +12,5 @@ jobs:
         uses: mooyoul/tslint-actions@v1.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '*.ts'
-          config: tslint.yml
+          pattern: "*.ts"
+          config: eslintrc.yml
