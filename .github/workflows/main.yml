@@ -1,16 +1,11 @@
-name: eslint check
-on: [push]
+name: ESLint
+on: push
 jobs:
-  job:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v1
-      - name: Prepare
-        run: npm ci
-      - name: Lint
-        uses: mooyoul/tslint-actions@v1.1.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: "*.ts"
-          config: .eslintrc.yml
+      - uses: actions/checkout@v2
+      - name: Install modules
+        run: yarn
+      - name: Run ESLint
+        run: eslint . --ext .js,.jsx,.ts,.tsx
