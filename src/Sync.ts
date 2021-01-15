@@ -341,15 +341,15 @@ export default class Sync {
 function determineExtension(path) {
     const parts = path.split(".");
     return parts[parts.length - 1];
-  }
+}
 
-  function extractID(line) {
+function extractID(line) {
     const parts = line.split(' ');
     return parts[2];
-  }
+}
 
-  function insertID(line) {
+function insertID(line) {
     const parts = line.split(" ");
     const part = parts[parts.length - 1];
     return part.replace("-->", "");
-  }
+}
