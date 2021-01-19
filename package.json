@@ -8,14 +8,17 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "test": "echo \"tests are not available\" && exit 1"
+    "test": "echo \"tests are not available\" && exit 1",
+    "build": "tsc",
+    "dev": "ts-node index.ts",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@octokit/rest": "^18.0.3",
     "anzip": "^0.2.0",
     "arraybuffer-to-buffer": "^0.0.7",
     "cli-progress": "^3.8.2",
-    "js-logger": "^1.6.0",
+    "js-logger": "^1.6.1",
     "line-reader": "^0.4.0",
     "node-read-yaml": "^1.0.1",
     "path": "^0.12.7",
@@ -23,6 +26,14 @@
     "rimraf": "^3.0.2"
   },
   "bin": {
-    "snipsync": "src/index.js"
+    "snipsync": "index.ts"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.8.0",
+    "@types/node": "^14.14.20",
+    "@typescript-eslint/parser": "^4.13.0",
+    "eslint": "^7.17.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.1.3"
   }
 }
