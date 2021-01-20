@@ -24,8 +24,9 @@ Create a file called "snipsync.config.yaml" in the project root. This file speci
 - The local directory that contains the files to be spliced with the code snippets.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
+If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
 
-Example snipsync.config.yaml:
+Example of an complete snipsync.config.yaml:
 
 ```yaml
 origins:
@@ -38,7 +39,16 @@ origins:
 target: docs
 
 features:
-  enable_source_link: true
+  enable_source_link: false
+```
+
+Example of an bare minimum snipsync.config.yaml:
+
+```yaml
+origins:
+  - owner: temporalio
+    repo: go-samples
+target: docs
 ```
 
 ### Source code
@@ -64,7 +74,7 @@ In the target files wrap the location with comments that reference the identifie
 <!--SNIPEND-->
 ```
 
-In the example above, the "hellouniverse" code snippet will be spliced between the comments. Any text inside of the placeholders will be replaced by the code snippet when the tool runs. The tool will automatically specify the code type for markdown rendering. For example, if the source file ends in ".go" then the code section will be written like this: `` ```go ``
+In the example above, the "hellouniverse" code snippet will be spliced between the comments. Any text inside of the placeholders will be replaced by the code snippet when the tool runs. The tool will automatically specify the code type for markdown rendering. For example, if the source file ends in ".go" then the code section will be written like this: ` ```go `
 
 ## Run
 
