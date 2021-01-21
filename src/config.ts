@@ -13,7 +13,7 @@ export const readConfig = () => {
   cfgProgress.start(1, 0);
   const cfg = sync(cfgPath);
 
-  //default source link to true if in config it isn't specify, can set to false if set in the config
+  //Enable source link is set to true if it isn't specified in the config
   if (cfg?.features?.enable_source_link ?? true) {
     cfg['features'] = {};
     cfg['features']['enable_source_link'] = true;

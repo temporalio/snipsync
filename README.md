@@ -26,7 +26,7 @@ Create a file called "snipsync.config.yaml" in the project root. This file speci
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
 
-Example of an complete snipsync.config.yaml:
+Example of a complete snipsync.config.yaml:
 
 ```yaml
 origins:
@@ -42,7 +42,7 @@ features:
   enable_source_link: false
 ```
 
-Example of an bare minimum snipsync.config.yaml:
+Example of a bare minimum snipsync.config.yaml:
 
 ```yaml
 origins:
