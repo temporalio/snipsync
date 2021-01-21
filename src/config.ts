@@ -13,6 +13,12 @@ export const readConfig = () => {
   cfgProgress.start(1, 0);
   const cfg = sync(cfgPath);
 
+  //Enable source link is set to true if it isn't specified in the config
+  if (cfg?.features?.enable_source_link ?? true) {
+    cfg['features'] = {};
+    cfg['features']['enable_source_link'] = true;
+  }
+
   cfgProgress.update(1);
   cfgProgress.stop();
   return cfg;
