@@ -344,8 +344,7 @@ function determineExtension(path) {
 }
 
 function extractID(line) {
-    const parts = line.split(' ');
-    return parts[2];
+    return line.match(/(?<=\bSNIPSTART\s)(\w+-\w+|\w+)/g)[0];
 }
 
 function insertID(line) {
