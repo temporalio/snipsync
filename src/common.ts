@@ -1,4 +1,3 @@
-
 export const rootDir = process.cwd();
 export const cfgFile = 'snipsync.config.yaml';
 export const extractionDir = 'sync_repos';

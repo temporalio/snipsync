@@ -1,4 +1,3 @@
-  
 import { join } from 'path';
 import { sync } from 'node-read-yaml';
 import { cfgFile, rootDir, fmtProgressBar } from './common';
