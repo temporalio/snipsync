@@ -1,24 +1,24 @@
 {
-    "compilerOptions": {
-      "target": "es2017",
-      "module": "commonjs",
-      "types": ["node"],
-      "strict": false,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "moduleResolution": "node",
-      "pretty": true,
-      "sourceMap": true,
-      "resolveJsonModule": true,
-      "outDir": "./dist",
-    },
-    "include": [
-      "index.ts",
-      "src/*.ts",
-      "src/**/*.ts"
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "types": ["node"],
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "pretty": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+  },
+  "include": [
+    "index.ts",
+    "src/*.ts",
+    "src/**/*.ts"
   ],
   "exclude": [
       "node_modules"
   ]
-  }
+}

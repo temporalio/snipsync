@@ -2,10 +2,7 @@ import {join} from 'path';
 import { Octokit } from "@octokit/rest";
 import { promisify } from "util";
 import { eachLine } from "line-reader";
-import Snippet from "./classes/Snippet";
-import File from "./classes/File";
-import Repo from "./classes/Repo";
-import { extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } from "./common";
+import { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } from "./common";
 import { writeFile, unlink } from "fs";
 import arrayBuffToBuff from "arraybuffer-to-buffer";
 import anzip from "anzip";
@@ -13,108 +10,208 @@ import readdirp from "readdirp";
 import rimraf from "rimraf";
 import progress from "cli-progress";
 import { ILogger } from 'js-logger';
-import { ConfigType, Origins } from '../types';
-
+// Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
-
-export default class Sync {
-    config: ConfigType;
-    origins: Origins[];
-    logger: ILogger;
-    github: any;
-    constructor(cfg: ConfigType, logger: ILogger) {
-      this.config = cfg;
-      this.origins = cfg.origins;
-      this.logger = logger;
-      const octokit = new Octokit();
-      this.github = octokit;
+// ConfigType is the overall configuration structure
+interface ConfigType {
+  origins: Origins[];
+  target: string;
+  features: Features;
+}
+// Origins is the configuration structure of Github repo info entity
+interface Origins {
+  owner: string;
+  repo: string;
+  ref ?: string;
+}
+// Features is the configuration structure of additional optional features
+interface Features {
+  enable_source_link: boolean;
+}
+// FilePath is the structure of the FilePath entity
+interface FilePath {
+  name: string;
+  directory: string;
+  saved: boolean;
+}
+// Snippet class contains info and methods used for passing and formatting code snippets
+class Snippet {
+  id: string;
+  ext: string;
+  owner: string;
+  repo: string;
+  ref: string;
+  filePath: FilePath;
+  lines: string[];
+  constructor (id: string, ext: string, owner: string, repo: string, ref: string, filePath: FilePath) {
+    this.id = id;
+    this.ext = ext;
+    this.owner = owner;
+    this.repo = repo;
+    this.ref = ref;
+    this.filePath = filePath;
+    this.lines = [];
+  }
+  // fmt creates an array of file lines from the Snippet variables
+  fmt(fmtSourceLink: string) {
+    this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
+    this.lines.splice(this.lines.length, 0, markdownCodeTicks);
+    if(fmtSourceLink) {
+      this.lines.splice(0, 0, this.fmtSourceLink());
     }
-
-    async run() {
-        // Download repo as zip file.
-        // Extract to sync_repos directory.
-        // Get repository details and file paths.
-        const repositories = await this.getRepos();
-
-        // Search each file and scrape the snippets
-        const snippets = await this.extractSnippets(repositories);
-
-        // Get the names of all the files in the target directory
-        const insertFP = await this.getTargetFilePaths();
-
-        // Create an object for each file in the target directory
-        const files = await this.getTargetFiles(insertFP);
-
-        // Splice the snippets in the file objects
-        const filesToWrite = await this.spliceSnippets(snippets, files);
-
-        // Overwrite the files to the target directory
-        await this.writeFiles(filesToWrite);
-
-        // Delete the sync_repos directory
-        await this.cleanUp();
-
-        this.logger.info("Snippet sync operation complete!");
-        return;
-      }
-
-      async clear() {
-        const filePaths = await this.getTargetFilePaths();
-        const files = await this.getTargetFiles(filePaths);
-        const filesToWrite = await this.clearSnippets(files);
-        await this.writeFiles(filesToWrite);
-        this.logger.info("Snippets have been cleared.");
-      }
-
-      async getRepos() {
-        const repositories = [];
-        await Promise.all(
-          this.origins.map(async ({ owner, repo, ref }) => {
-            const repository = new Repo(owner, repo, ref);
-            const dlProgress = new progress.Bar(
-              {
-                format: fmtProgressBar(`downloading repo ${join(owner, repo)}`),
-                barsize: 20,
-              },
-              progress.Presets.shades_classic
-            );
-            dlProgress.start(3, 0);
-            const byteArray = await this.getArchive(owner, repo, ref);
-            dlProgress.increment();
-            const fileName = `${repo}.zip`;
-            const buffer = arrayBuffToBuff(byteArray);
-            await writeAsync(fileName, buffer);
-            dlProgress.increment();
-            repository.filePaths = await this.unzip(fileName);
-            repositories.push(repository);
-            dlProgress.increment();
-            dlProgress.stop();
-          })
+  }
+  // fmtSourceLink creates a markdown link to the source of the snippet
+  fmtSourceLink() {
+    const url: string = this.buildURL();
+    const path: string = this.buildPath();
+    const link: string = `[${path}](${url})`;
+    return link;
+  }
+  // buildPath creates a string that represents the relative path to the snippet
+  buildPath() {
+    const sourceURLParts: string[] = this.filePath.directory.split('/');
+    const path: string = [
+      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      this.filePath.name,
+    ].join('/');
+    return path;
+  }
+  // buildURL creates a url to the snippet source location
+  buildURL() {
+    const sourceURLParts: string[] = this.filePath.directory.split('/');
+    let ref: string = "";
+    if (this.ref !== "" && this.ref !== undefined) {
+      ref = this.ref;
+    } else {
+      ref = "master";
+    }
+    const url: string = [
+      'https://github.com',
+      this.owner,
+      this.repo,
+      "blob",
+      ref,
+      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      this.filePath.name,
+    ].join('/');
+    return url;
+  }
+}
+// Repo is the class that maps repo configuration to local filepaths
+class Repo {
+  owner: string;
+  repo: string;
+  ref: string;
+  filePaths: string[];
+  constructor(owner: string, repo: string, ref: string) {
+    this.owner = owner;
+    this.repo = repo;
+    this.ref = ref;
+    this.filePaths = [];
+  }
+}
+// File is the class that contains a filename and lines of the file
+class File {
+  filename: string;
+  lines: string[];
+  constructor(filename: string) {
+    this.filename = filename;
+    this.lines = [];
+  }
+}
+// Sync is the class of methods that can be used to do the following:
+// Download repos, extract code snippets, merge snippets, and clear snippets from target files
+export default class Sync {
+  config: ConfigType;
+  origins: Origins[];
+  logger: ILogger;
+  github: any;
+  constructor(cfg: ConfigType, logger: ILogger) {
+    this.config = cfg;
+    this.origins = cfg.origins;
+    this.logger = logger;
+    const octokit = new Octokit();
+    this.github = octokit;
+  }
+  // run is the main method of the Sync class that downloads, extracts, and merges snippets
+  async run() {
+    // Download repo as zip file.
+    // Extract to sync_repos directory.
+    // Get repository details and file paths.
+    const repositories = await this.getRepos();
+    // Search each file and scrape the snippets
+    const snippets = await this.extractSnippets(repositories);
+    // Get the names of all the files in the target directory
+    const insertFP = await this.getTargetFilePaths();
+    // Create an object for each file in the target directory
+    const files = await this.getTargetFiles(insertFP);
+    // Splice the snippets in the file objects
+    const filesToWrite = await this.spliceSnippets(snippets, files);
+    // Overwrite the files to the target directory
+    await this.writeFiles(filesToWrite);
+    // Delete the sync_repos directory
+    await this.cleanUp();
+    this.logger.info("Snippet sync operation complete!");
+    return;
+  }
+  // clear is the method that will remove snippets from target merge files
+  async clear() {
+    const filePaths = await this.getTargetFilePaths();
+    const files = await this.getTargetFiles(filePaths);
+    const filesToWrite = await this.clearSnippets(files);
+    await this.writeFiles(filesToWrite);
+    this.logger.info("Snippets have been cleared.");
+  }
+  // getRepos is the method that downloads all of the Github repos
+  async getRepos() {
+    const repositories = [];
+    await Promise.all(
+      this.origins.map(async ({ owner, repo, ref }) => {
+        const repository = new Repo(owner, repo, ref);
+        const dlProgress = new progress.Bar(
+          {
+            format: fmtProgressBar(`downloading repo ${join(owner, repo)}`),
+            barsize: 20,
+          },
+          progress.Presets.shades_classic
         );
-        return repositories;
-      }
-
-      async unzip(filename) {
-        const zipPath = join(rootDir, filename);
-        const unzipPath = join(rootDir, extractionDir);
-        const { files } = await anzip(zipPath, { outputPath: unzipPath });
-        await unlinkAsync(zipPath);
-        return files;
-      }
-
-      async getArchive(owner, repo, ref) {
-        const result = await this.github.repos.downloadArchive({
-          owner,
-          repo,
-          ref,
-          archive_format: "zipball",
-        });
-        return result.data;
-      }
-
+        dlProgress.start(3, 0);
+        const byteArray = await this.getArchive(owner, repo, ref);
+        dlProgress.increment();
+        const fileName = `${repo}.zip`;
+        const buffer = arrayBuffToBuff(byteArray);
+        await writeAsync(fileName, buffer);
+        dlProgress.increment();
+        repository.filePaths = await this.unzip(fileName);
+        repositories.push(repository);
+        dlProgress.increment();
+        dlProgress.stop();
+      })
+    );
+    return repositories;
+  }
+  // unzip unzips the Github repo archive
+  async unzip(filename) {
+    const zipPath = join(rootDir, filename);
+    const unzipPath = join(rootDir, extractionDir);
+    const { files } = await anzip(zipPath, { outputPath: unzipPath });
+    await unlinkAsync(zipPath);
+    return files;
+  }
+  // getArchive gets the Github repo archive from Github
+  async getArchive(owner, repo, ref) {
+    const result = await this.github.repos.downloadArchive({
+      owner,
+      repo,
+      ref,
+      archive_format: "zipball",
+    });
+    return result.data;
+  }
+  // extractSnippets returns an array of code snippets that are found in the repositories
   async extractSnippets(repositories) {
     const snippets = [];
     await Promise.all(
@@ -162,7 +259,7 @@ export default class Sync {
     }
     return snippets;
   }
-
+  // getTargetFilesPaths identifies the paths to the target write files
   async getTargetFilePaths() {
     const writeDir = join(rootDir, this.config.target);
     const insertPathProgress = new progress.Bar(
@@ -183,7 +280,7 @@ export default class Sync {
     insertPathProgress.stop();
     return insertFilePaths;
   }
-
+  // getTargetFiles reads the files
   async getTargetFiles(filePaths) {
     const getInsertFilesProgress = new progress.Bar(
       {
@@ -201,7 +298,7 @@ export default class Sync {
     getInsertFilesProgress.stop();
     return files;
   }
-
+  // getTargetFileLines reads each line of the file
   async getTargetFileLines(filename) {
     const insertRootPath = join(rootDir, this.config.target);
     const path = join(insertRootPath, filename);
@@ -213,7 +310,7 @@ export default class Sync {
     file.lines = fileLines;
     return file;
   }
-
+  // spliceSnippets merges the snippet into the target location of a file
   async spliceSnippets(snippets, files) {
     const spliceProgress = new progress.Bar(
       {
@@ -232,6 +329,7 @@ export default class Sync {
     spliceProgress.stop();
     return files;
   }
+  // getSplicedFile returns the the spliced file
   async getSplicedFile(snippet, file) {
     const staticFile = file;
     let dynamicFile = file;
@@ -241,7 +339,7 @@ export default class Sync {
     for (let [idx, _] of staticFile.lines.entries()) {
       const line = file.lines[idx];
       if (line.includes(writeStart)) {
-        const id = insertID(line);
+        const id = extractID(line);
         if (id === snippet.id) {
           spliceStart = fileLineNumber;
           lookForStop = true;
@@ -260,13 +358,13 @@ export default class Sync {
     }
     return dynamicFile;
   }
-
+  // spliceFile merges an individual snippet into the file
   async spliceFile(start, end, snippet, file) {
     const rmlines = end - start;
     file.lines.splice(start, rmlines - 1, ...snippet.lines);
     return file;
   }
-
+  // clearSnippets loops through target files to remove snippets
   async clearSnippets(files) {
     const clearProgress = new progress.Bar(
       {
@@ -283,7 +381,7 @@ export default class Sync {
     clearProgress.stop();
     return files;
   }
-
+  // getClearedFile removes snippet lines from a specific file
   async getClearedFile(file) {
     let omit = false;
     const newFileLines = [];
@@ -301,7 +399,7 @@ export default class Sync {
     file.lines = newFileLines;
     return file;
   }
-
+  // writeFiles writes file lines to target files
   async writeFiles(files) {
     const insertRootPath = join(rootDir, this.config.target);
     const writeFileProgress = new progress.Bar(
@@ -321,7 +419,7 @@ export default class Sync {
     writeFileProgress.stop();
     return;
   }
-
+  // cleanUp deletes temporary files and folders
   async cleanUp() {
     const cleanupProgress = new progress.Bar(
       {
@@ -337,18 +435,12 @@ export default class Sync {
     cleanupProgress.stop();
   }
 }
-
+// determineExtension returns the file extension
 function determineExtension(path) {
     const parts = path.split(".");
     return parts[parts.length - 1];
 }
-
+// extractID uses regex to exract the id from a string
 function extractID(line) {
-    return line.match(/(?<=\bSNIPSTART\s)(\w+-\w+|\w+)/g)[0];
-}
-
-function insertID(line) {
-    const parts = line.split(" ");
-    const part = parts[parts.length - 1];
-    return part.replace("-->", "");
+  return line.match(/(?<=\bSNIPSTART\s)(\w+-\w+)+(\w+)/g)[0];
 }
