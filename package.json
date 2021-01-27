@@ -1,8 +1,8 @@
 {
   "name": "snipsync",
-  "version": "0.0.2-beta-6",
+  "version": "1.0.0",
   "description": "Sync docs with github repo code snippets",
-  "main": "index.js",
+  "main": "index.ts",
   "repository": "git@github.com:temporalio/snippetsync.git",
   "author": "Cully Wakelin <cully@temporal.io>",
   "license": "MIT",
