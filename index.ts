@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import logger from 'js-logger';
 import { readConfig } from './src/config';
 import Sync from './src/Sync';
