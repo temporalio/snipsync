@@ -28,6 +28,7 @@
     "snipsync": "index.js"
   },
   "devDependencies": {
-    "eslint": "^7.17.0"
+    "eslint": "^7.17.0",
+    "esprima": "^4.0.1"
   }
 }

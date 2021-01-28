@@ -9,4 +9,4 @@ module.exports = {
   writeStart: '<!--SNIPSTART',
   writeEnd: '<!--SNIPEND',
   fmtProgressBar: (message) => `⭐ + | {bar} | {percentage}% | {value}/{total} chunks | ${message}`,
-}
+};
