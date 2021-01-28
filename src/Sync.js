@@ -1,52 +1,22 @@
-import {join} from 'path';
-import { Octokit } from "@octokit/rest";
-import { promisify } from "util";
-import { eachLine } from "line-reader";
-import { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } from "./common";
-import { writeFile, unlink } from "fs";
-import arrayBuffToBuff from "arraybuffer-to-buffer";
-import anzip from "anzip";
-import readdirp from "readdirp";
-import rimraf from "rimraf";
-import progress from "cli-progress";
-import { ILogger } from 'js-logger';
+const { join } = require('path');
+const { Octokit } = require('@octokit/rest');
+const { promisify } = require('util');
+const { eachLine } = require('line-reader');
+const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } = require('./common');
+const { writeFile, unlink } = require('fs');
+const arrayBuffToBuff = require('arraybuffer-to-buffer');
+const anzip = require('anzip');
+const readdirp = require('readdirp');
+const rimraf = require('rimraf');
+const progress = require('cli-progress');
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
-// ConfigType is the overall configuration structure
-interface ConfigType {
-  origins: Origins[];
-  target: string;
-  features: Features;
-}
-// Origins is the configuration structure of Github repo info entity
-interface Origins {
-  owner: string;
-  repo: string;
-  ref ?: string;
-}
-// Features is the configuration structure of additional optional features
-interface Features {
-  enable_source_link: boolean;
-}
-// FilePath is the structure of the FilePath entity
-interface FilePath {
-  name: string;
-  directory: string;
-  saved: boolean;
-}
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
-  id: string;
-  ext: string;
-  owner: string;
-  repo: string;
-  ref: string;
-  filePath: FilePath;
-  lines: string[];
-  constructor (id: string, ext: string, owner: string, repo: string, ref: string, filePath: FilePath) {
+  constructor (id, ext, owner, repo, ref, filePath) {
     this.id = id;
     this.ext = ext;
     this.owner = owner;
@@ -56,7 +26,7 @@ class Snippet {
     this.lines = [];
   }
   // fmt creates an array of file lines from the Snippet variables
-  fmt(fmtSourceLink: string) {
+  fmt(fmtSourceLink) {
     this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
     this.lines.splice(this.lines.length, 0, markdownCodeTicks);
     if(fmtSourceLink) {
@@ -65,15 +35,15 @@ class Snippet {
   }
   // fmtSourceLink creates a markdown link to the source of the snippet
   fmtSourceLink() {
-    const url: string = this.buildURL();
-    const path: string = this.buildPath();
-    const link: string = `[${path}](${url})`;
+    const url = this.buildURL();
+    const path = this.buildPath();
+    const link = `[${path}](${url})`;
     return link;
   }
   // buildPath creates a string that represents the relative path to the snippet
   buildPath() {
-    const sourceURLParts: string[] = this.filePath.directory.split('/');
-    const path: string = [
+    const sourceURLParts = this.filePath.directory.split('/');
+    const path = [
       ...(sourceURLParts.slice(1, sourceURLParts.length)),
       this.filePath.name,
     ].join('/');
@@ -81,14 +51,14 @@ class Snippet {
   }
   // buildURL creates a url to the snippet source location
   buildURL() {
-    const sourceURLParts: string[] = this.filePath.directory.split('/');
-    let ref: string = "";
+    const sourceURLParts = this.filePath.directory.split('/');
+    let ref = "";
     if (this.ref !== "" && this.ref !== undefined) {
       ref = this.ref;
     } else {
       ref = "master";
     }
-    const url: string = [
+    const url = [
       'https://github.com',
       this.owner,
       this.repo,
@@ -102,11 +72,7 @@ class Snippet {
 }
 // Repo is the class that maps repo configuration to local filepaths
 class Repo {
-  owner: string;
-  repo: string;
-  ref: string;
-  filePaths: string[];
-  constructor(owner: string, repo: string, ref: string) {
+  constructor(owner, repo, ref) {
     this.owner = owner;
     this.repo = repo;
     this.ref = ref;
@@ -115,21 +81,15 @@ class Repo {
 }
 // File is the class that contains a filename and lines of the file
 class File {
-  filename: string;
-  lines: string[];
-  constructor(filename: string) {
+  constructor(filename) {
     this.filename = filename;
     this.lines = [];
   }
 }
 // Sync is the class of methods that can be used to do the following:
 // Download repos, extract code snippets, merge snippets, and clear snippets from target files
-export default class Sync {
-  config: ConfigType;
-  origins: Origins[];
-  logger: ILogger;
-  github: any;
-  constructor(cfg: ConfigType, logger: ILogger) {
+class Sync {
+  constructor(cfg, logger) {
     this.config = cfg;
     this.origins = cfg.origins;
     this.logger = logger;
@@ -233,7 +193,7 @@ export default class Sync {
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
-          await eachLineAsync(path, (line: string) => {
+          await eachLineAsync(path, (line) => {
             if (line.includes(readEnd)) {
               capture = false;
               fileSnipsCount++;
@@ -444,3 +404,5 @@ function determineExtension(path) {
 function extractID(line) {
   return line.match(/(?<=\bSNIPSTART\s)(\w+-\w+)+(\w+)/g)[0];
 }
+
+module.exports = { Sync };

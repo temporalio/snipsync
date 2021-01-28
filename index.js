@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import logger from 'js-logger';
-import { readConfig } from './src/config';
-import Sync from './src/Sync';
+const logger = require('js-logger');
+const { readConfig } = require('./src/config');
+const { Sync } = require('./src/Sync');
 
 logger.useDefaults();
 const args = process.argv.slice(2);
