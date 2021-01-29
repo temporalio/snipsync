@@ -3,7 +3,7 @@ env:
   es6: true
   mocha: true
   node: true
-parser: "esprima"
+parser: "babel-eslint"
 extends:
   - "eslint:recommended"
 parserOptions:
