@@ -1,9 +1,9 @@
-import { join } from 'path';
-import { sync } from 'node-read-yaml';
-import { cfgFile, rootDir, fmtProgressBar } from './common';
-import progress from 'cli-progress';
+const { join } = require('path');
+const { sync } = require('node-read-yaml');
+const { cfgFile, rootDir, fmtProgressBar } = require('./common');
+const progress = require('cli-progress');
 
-export const readConfig = () => {
+module.exports.readConfig = () => {
   const cfgPath = join(rootDir, cfgFile);
   const cfgProgress = new progress.Bar({
     format: fmtProgressBar(`loading configuration from ${cfgPath}`),
