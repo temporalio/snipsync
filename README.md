@@ -4,7 +4,7 @@ Snipsync makes sure your documented code snippets are always in sync with your G
 
 ## Prerequisites
 
-This tool requires [Node](https://nodejs.org/) and [Yarn](https://yarnpkg.com/).
+This tool requires [Node](https://nodejs.org/) v15.0.0 or above (recommended 15.2.1) and [Yarn](https://yarnpkg.com/).
 
 ## Install
 
