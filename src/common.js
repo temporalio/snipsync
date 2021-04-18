@@ -7,6 +7,8 @@ module.exports = {
   readStart: '@@@SNIPSTART',
   readEnd: '@@@SNIPEND',
   writeStart: '<!--SNIPSTART',
+  writeStartClose: '-->',
   writeEnd: '<!--SNIPEND',
+  writeEndClose: '-->',
   fmtProgressBar: (message) => `⭐ + | {bar} | {percentage}% | {value}/{total} chunks | ${message}`,
 };

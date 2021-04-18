@@ -2,13 +2,14 @@ const { join } = require('path');
 const { Octokit } = require('@octokit/rest');
 const { promisify } = require('util');
 const { eachLine } = require('line-reader');
-const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeEnd } = require('./common');
+const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeStartClose, writeEnd } = require('./common');
 const { writeFile, unlink } = require('fs');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
 const readdirp = require('readdirp');
 const rimraf = require('rimraf');
 const progress = require('cli-progress');
+
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
@@ -27,11 +28,14 @@ class Snippet {
   }
   // fmt creates an array of file lines from the Snippet variables
   fmt(fmtSourceLink) {
-    this.lines.splice(0, 0, fmtStartCodeBlock(this.ext));
-    this.lines.splice(this.lines.length, 0, markdownCodeTicks);
-    if(fmtSourceLink) {
-      this.lines.splice(0, 0, this.fmtSourceLink());
+    const lines = [];
+    if (fmtSourceLink) {
+      lines.push(this.fmtSourceLink());
     }
+    lines.push(fmtStartCodeBlock(this.ext));
+    lines.push(...this.lines);
+    lines.push(markdownCodeTicks);
+    return lines;
   }
   // fmtSourceLink creates a markdown link to the source of the snippet
   fmtSourceLink() {
@@ -203,7 +207,7 @@ class Sync {
             }
             if (line.includes(readStart)) {
               capture = true;
-              const id = extractID(line).trim();
+              const id = extractReadID(line);
               const snip = new Snippet(id, ext, owner, repo, ref, item);
               fileSnips.push(snip);
             }
@@ -214,9 +218,6 @@ class Sync {
         extractSnippetProgress.stop();
       })
     );
-    for (const snippet of snippets) {
-      snippet.fmt(this.config.features.enable_source_link);
-    }
     return snippets;
   }
   // getTargetFilesPaths identifies the paths to the target write files
@@ -296,11 +297,13 @@ class Sync {
     let fileLineNumber = 1;
     let lookForStop = false;
     let spliceStart = 0;
+    let config;
     for (let [idx, _] of staticFile.lines.entries()) {
       const line = file.lines[idx];
       if (line.includes(writeStart)) {
-        const id = extractID(line);
-        if (id === snippet.id) {
+        const extracted = extractWriteIDAndConfig(line);
+        if (extracted.id === snippet.id) {
+          config = extracted.config;
           spliceStart = fileLineNumber;
           lookForStop = true;
         }
@@ -310,7 +313,8 @@ class Sync {
           spliceStart,
           fileLineNumber,
           snippet,
-          dynamicFile
+          dynamicFile,
+          config || this.config.features
         );
         lookForStop = false;
       }
@@ -319,9 +323,9 @@ class Sync {
     return dynamicFile;
   }
   // spliceFile merges an individual snippet into the file
-  async spliceFile(start, end, snippet, file) {
+  async spliceFile(start, end, snippet, file, config) {
     const rmlines = end - start;
-    file.lines.splice(start, rmlines - 1, ...snippet.lines);
+    file.lines.splice(start, rmlines - 1, ...snippet.fmt(config.enable_source_link));
     return file;
   }
   // clearSnippets loops through target files to remove snippets
@@ -400,9 +404,31 @@ function determineExtension(path) {
     const parts = path.split(".");
     return parts[parts.length - 1];
 }
-// extractID uses regex to exract the id from a string
-function extractID(line) {
-  return line.match(/(?<=\bSNIPSTART\s)(\w+-\w+)+(\w+)/g)[0];
+
+// See: https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+function escapeStringRegexp(string) {
+  return string
+    .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+    .replace(/-/g, '\\x2d');
+}
+
+const readMatchRegexp = new RegExp(escapeStringRegexp(readStart) + /\s+(\S+)/.source);
+
+const writeMatchRegexp = new RegExp(
+  escapeStringRegexp(writeStart)
+  + /\s+(\S+)(?:\s+(.+))?\s*/.source
+  + escapeStringRegexp(writeStartClose));
+
+// extractReadID uses regex to exract the id from a string
+function extractReadID(line) {
+  const matches = line.match(readMatchRegexp);
+  return matches[1];
+}
+
+// extractWriteIDAndConfig uses regex to exract the id from a string
+function extractWriteIDAndConfig(line) {
+  const matches = line.match(writeMatchRegexp);
+  return { id: matches[1], config: matches[2] ? JSON.parse(matches[2]) : undefined };
 }
 
 module.exports = { Sync };
