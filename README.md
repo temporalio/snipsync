@@ -84,6 +84,15 @@ Any text inside of the placeholders will be replaced by the code snippet when th
 The tool will automatically specify the code type for markdown rendering.
 For example, if the source file ends in ".go" then the code section will be written like this: ` ```go `
 
+#### Per-snip features
+
+In order to customize how a single snip is rendered, put a custom feature configuration as JSON in the snip start line.
+
+```md
+<!--SNIPSTART hellouniverse {"enable_source_link": false}-->
+<!--SNIPEND-->
+```
+
 ## Run
 
 From the root directory of your project run the following command:
