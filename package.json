@@ -24,6 +24,7 @@
     "readdirp": "^3.4.0",
     "rimraf": "^3.0.2"
   },
+  "files": ["index.js", "src"],
   "bin": {
     "snipsync": "index.js"
   },
