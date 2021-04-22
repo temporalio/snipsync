@@ -19,7 +19,7 @@ yarn add snipsync
 Create a file called "snipsync.config.yaml" in the project root.
 This file specifies the following:
 
-- The Github repositories where the tool will look for source code snippets.
+- The Github repositories or local files where the tool will look for source code snippets.
 - The local directory that contains the files to be spliced with the code snippets.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
@@ -34,6 +34,8 @@ origins:
     ref: 6880b0d09ddb6edf150e3095c90522602022578f
   - owner: temporalio
     repo: java-samples
+  - files:
+    - ./src/**/*.ts
 
 target: docs
 

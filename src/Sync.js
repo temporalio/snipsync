@@ -1,4 +1,4 @@
-const { join } = require('path');
+const { join, basename, dirname } = require('path');
 const { Octokit } = require('@octokit/rest');
 const { promisify } = require('util');
 const { eachLine } = require('line-reader');
@@ -9,6 +9,7 @@ const anzip = require('anzip');
 const readdirp = require('readdirp');
 const rimraf = require('rimraf');
 const progress = require('cli-progress');
+const glob = require('glob');
 
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
@@ -133,7 +134,21 @@ class Sync {
   async getRepos() {
     const repositories = [];
     await Promise.all(
-      this.origins.map(async ({ owner, repo, ref }) => {
+      this.origins.map(async (origin) => {
+        if ('files' in origin) {
+          repositories.push({
+            owner: 'local',
+            repo: 'local',
+            filePaths: origin.files.flatMap((pattern) => glob.sync(pattern).map((f) => ({
+              name: basename(f), directory: dirname(f)
+            }))),
+          });
+          return;
+        }
+        if (!('owner' in origin && 'repo' in origin)) {
+          throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
+        }
+        const { owner, repo, ref } = origin;
         const repository = new Repo(owner, repo, ref);
         const dlProgress = new progress.Bar(
           {
@@ -182,7 +197,7 @@ class Sync {
       repositories.map(async ({ owner, repo, ref, filePaths }) => {
         const extractSnippetProgress = new progress.Bar(
           {
-            format: fmtProgressBar(`extracting snippets from ${repo}`),
+            format: fmtProgressBar(`extracting snippets from ${owner}/${repo}`),
             barsize: 20,
           },
           progress.Presets.shades_classic
@@ -193,7 +208,9 @@ class Sync {
           extractSnippetProgress.increment();
           const ext = determineExtension(item.name);
           let path = join(item.directory, item.name);
-          path = join(extractRootPath, path);
+          if (!(owner === 'local' && repo === 'local')) {
+            path = join(extractRootPath, path);
+          }
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
