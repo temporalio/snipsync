@@ -9,8 +9,9 @@ node_modules
 # Generated directory
 sync_repos
 
-# Test directory
+# Test directories
 docs
+blog
 
 # Test operational config
 snipsync.config.yaml
