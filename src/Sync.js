@@ -93,7 +93,7 @@ class File {
   }
 
   fileString() {
-    return `${this.lines.join("\n")}\n`
+    return `${this.lines.join("\n")}\n`;
   }
 }
 // Sync is the class of methods that can be used to do the following:
@@ -145,7 +145,7 @@ class Sync {
             owner: 'local',
             repo: 'local',
             filePaths: origin.files.flatMap((pattern) => glob.sync(pattern).map((f) => ({
-              name: basename(f), directory: dirname(f)
+              name: basename(f), directory: dirname(f),
             }))),
           });
           return;
