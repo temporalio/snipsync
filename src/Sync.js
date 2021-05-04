@@ -105,7 +105,6 @@ class ProgressBar {
       progress.Presets.shades_classic,
     );
     this.startValue = 0;
-    this.currentValue = 0;
     this.totalValue = 0;
   }
   // start sets the initial text display
