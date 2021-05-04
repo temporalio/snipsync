@@ -100,7 +100,7 @@ class ProgressBar {
   constructor() {
     this.bar = new progress.Bar(
       {
-        format: `✂️ + [{bar}] {percentage}% | {value}/{total} chunks | operation: {operation}`,
+        format: `✂️ | {bar} | {percentage}% | {value}/{total} chunks | operation: {operation}`,
       },
       progress.Presets.shades_classic,
     );
@@ -122,7 +122,7 @@ class ProgressBar {
   increment() {
     this.bar.increment();
   }
-  // updates the text diplay
+  // updates the text display
   updateOperation(operation) {
     this.bar.update(
       {operation: `${operation}`},
