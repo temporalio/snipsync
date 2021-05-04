@@ -30,10 +30,10 @@ Example of a complete snipsync.config.yaml:
 ```yaml
 origins:
   - owner: temporalio
-    repo: go-samples
+    repo: samples-go
     ref: 6880b0d09ddb6edf150e3095c90522602022578f
   - owner: temporalio
-    repo: java-samples
+    repo: samples-java
   - files:
     - ./src/**/*.ts
 
@@ -48,7 +48,7 @@ Example of a bare minimum snipsync.config.yaml:
 ```yaml
 origins:
   - owner: temporalio
-    repo: go-samples
+    repo: samples-go
 target: docs
 ```
 
