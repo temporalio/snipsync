@@ -86,9 +86,14 @@ class Repo {
 }
 // File is the class that contains a filename and lines of the file
 class File {
-  constructor(filename) {
+  constructor(filename, fullpath) {
     this.filename = filename;
+    this.fullpath = fullpath;
     this.lines = [];
+  }
+
+  fileString() {
+    return `${this.lines.join("\n")}\n`;
   }
 }
 // Sync is the class of methods that can be used to do the following:
@@ -107,16 +112,16 @@ class Sync {
     // Extract to sync_repos directory.
     // Get repository details and file paths.
     const repositories = await this.getRepos();
-    // Search each file and scrape the snippets
+    // Search each origin file and scrape the snippets
     const snippets = await this.extractSnippets(repositories);
-    // Get the names of all the files in the target directory
-    const insertFP = await this.getTargetFilePaths();
-    // Create an object for each file in the target directory
-    const files = await this.getTargetFiles(insertFP);
+    // Get the infos (name, path) of all the files in the target directories
+    let targetFiles = await this.getTargetFilesInfos();
+    // Add the lines of each file
+    targetFiles = await this.getTargetFilesLines(targetFiles);
     // Splice the snippets in the file objects
-    const filesToWrite = await this.spliceSnippets(snippets, files);
-    // Overwrite the files to the target directory
-    await this.writeFiles(filesToWrite);
+    const splicedFiles = await this.spliceSnippets(snippets, targetFiles);
+    // Overwrite the files to the target directories
+    await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
     await this.cleanUp();
     this.logger.info("Snippet sync operation complete!");
@@ -124,8 +129,8 @@ class Sync {
   }
   // clear is the method that will remove snippets from target merge files
   async clear() {
-    const filePaths = await this.getTargetFilePaths();
-    const files = await this.getTargetFiles(filePaths);
+    const filePaths = await this.getTargetFilesInfos();
+    const files = await this.getTargetFilesLines(filePaths);
     const filesToWrite = await this.clearSnippets(files);
     await this.writeFiles(filesToWrite);
     this.logger.info("Snippets have been cleared.");
@@ -140,7 +145,7 @@ class Sync {
             owner: 'local',
             repo: 'local',
             filePaths: origin.files.flatMap((pattern) => glob.sync(pattern).map((f) => ({
-              name: basename(f), directory: dirname(f)
+              name: basename(f), directory: dirname(f),
             }))),
           });
           return;
@@ -237,56 +242,55 @@ class Sync {
     );
     return snippets;
   }
-  // getTargetFilesPaths identifies the paths to the target write files
-  async getTargetFilePaths() {
-    const writeDir = join(rootDir, this.config.target);
-    const insertPathProgress = new progress.Bar(
+  // getTargetFilesInfos identifies the paths to the target write files
+  async getTargetFilesInfos() {
+    const readTargetDirectoryProgress = new progress.Bar(
       {
-        format: fmtProgressBar("loading target file paths from " + writeDir),
+        format: fmtProgressBar("loading info for each target directory"),
         barsize: 20,
       },
       progress.Presets.shades_classic
     );
-    insertPathProgress.start(1, 0);
-    const insertFilePaths = [];
-    for await (const entry of readdirp(writeDir)) {
-      const { path } = entry;
-      insertFilePaths.push({ path });
-      insertPathProgress.setTotal(insertFilePaths.length);
-      insertPathProgress.increment();
+    readTargetDirectoryProgress.start(1, 0);
+    const targetFiles = [];
+    for (const target of this.config.targets) {
+      const targetDirPath = join(rootDir, target);
+      for await (const entry of readdirp(targetDirPath)) {
+        const file = new File(entry.basename, entry.fullPath);
+        targetFiles.push(file);
+        readTargetDirectoryProgress.setTotal(targetFiles.length);
+        readTargetDirectoryProgress.increment();
+      }
+      readTargetDirectoryProgress.stop();
     }
-    insertPathProgress.stop();
-    return insertFilePaths;
+    return targetFiles;
   }
-  // getTargetFiles reads the files
-  async getTargetFiles(filePaths) {
+  // getTargetFilesLines loops through the files and calls readLines on each one
+  async getTargetFilesLines(targetFiles) {
     const getInsertFilesProgress = new progress.Bar(
       {
-        format: fmtProgressBar("loading file lines for each insert file"),
+        format: fmtProgressBar("reading file lines for each target file"),
         barsize: 20,
       },
       progress.Presets.shades_classic
     );
-    getInsertFilesProgress.start(filePaths.length, 0);
-    const files = [];
-    for (const filePath of filePaths) {
-      files.push(await this.getTargetFileLines(filePath.path));
+    getInsertFilesProgress.start(targetFiles.length, 0);
+    const updatedFiles = [];
+    for (const targetFile of targetFiles) {
+      updatedFiles.push(await this.readLines(targetFile));
       getInsertFilesProgress.increment();
     }
     getInsertFilesProgress.stop();
-    return files;
+    return updatedFiles;
   }
-  // getTargetFileLines reads each line of the file
-  async getTargetFileLines(filename) {
-    const insertRootPath = join(rootDir, this.config.target);
-    const path = join(insertRootPath, filename);
-    const file = new File(filename);
+  // readLines reads each line of the file
+  async readLines(targetFile) {
     const fileLines = [];
-    await eachLineAsync(path, (line) => {
+    await eachLineAsync(targetFile.fullpath, (line) => {
       fileLines.push(line);
     });
-    file.lines = fileLines;
-    return file;
+    targetFile.lines = fileLines;
+    return targetFile;
   }
   // spliceSnippets merges the snippet into the target location of a file
   async spliceSnippets(snippets, files) {
@@ -382,19 +386,16 @@ class Sync {
   }
   // writeFiles writes file lines to target files
   async writeFiles(files) {
-    const insertRootPath = join(rootDir, this.config.target);
     const writeFileProgress = new progress.Bar(
       {
-        format: fmtProgressBar("writing files to " + insertRootPath),
+        format: fmtProgressBar("writing files"),
         barsize: 20,
       },
       progress.Presets.shades_classic
     );
     writeFileProgress.start(files.length, 0);
     for (const file of files) {
-      const fileString = `${file.lines.join("\n")}\n`;
-      const writePath = join(insertRootPath, file.filename);
-      await writeAsync(writePath, fileString);
+      await writeAsync(file.fullpath, file.fileString());
       writeFileProgress.increment();
     }
     writeFileProgress.stop();

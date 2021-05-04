@@ -20,7 +20,7 @@ Create a file called "snipsync.config.yaml" in the project root.
 This file specifies the following:
 
 - The Github repositories or local files where the tool will look for source code snippets.
-- The local directory that contains the files to be spliced with the code snippets.
+- The local directories that contain the files to be spliced with the code snippets.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
@@ -37,7 +37,9 @@ origins:
   - files:
     - ./src/**/*.ts
 
-target: docs
+targets:
+  - docs
+  - blog
 
 features:
   enable_source_link: false
@@ -49,7 +51,8 @@ Example of a bare minimum snipsync.config.yaml:
 origins:
   - owner: temporalio
     repo: go-samples
-target: docs
+targets:
+  - docs
 ```
 
 ## Comment wrappers
