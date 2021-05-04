@@ -119,7 +119,7 @@ class Sync {
     // Add the lines of each file
     targetFiles = await this.getTargetFilesLines(targetFiles);
     // Splice the snippets in the file objects
-    const splicedFiles = await this.spliceSnippets(snippets, targetFiles);
+    const splicedFiles = this.spliceSnippets(snippets, targetFiles);
     // Overwrite the files to the target directories
     await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
@@ -305,14 +305,14 @@ class Sync {
     for (const snippet of snippets) {
       spliceProgress.increment();
       for (let file of files) {
-        file = await this.getSplicedFile(snippet, file);
+        file = this.getSplicedFile(snippet, file);
       }
     }
     spliceProgress.stop();
     return files;
   }
   // getSplicedFile returns the the spliced file
-  async getSplicedFile(snippet, file) {
+  getSplicedFile(snippet, file) {
     const staticFile = file;
     let dynamicFile = file;
     let fileLineNumber = 1;
@@ -330,7 +330,7 @@ class Sync {
         }
       }
       if (line.includes(writeEnd) && lookForStop) {
-        dynamicFile = await this.spliceFile(
+        dynamicFile = this.spliceFile(
           spliceStart,
           fileLineNumber,
           snippet,
@@ -344,7 +344,7 @@ class Sync {
     return dynamicFile;
   }
   // spliceFile merges an individual snippet into the file
-  async spliceFile(start, end, snippet, file, config) {
+  spliceFile(start, end, snippet, file, config) {
     const rmlines = end - start;
     file.lines.splice(start, rmlines - 1, ...snippet.fmt(config.enable_source_link));
     return file;
