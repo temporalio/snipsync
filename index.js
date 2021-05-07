@@ -5,7 +5,7 @@ const { Sync } = require('./src/Sync');
 
 logger.useDefaults();
 const args = process.argv.slice(2);
-const cfg = readConfig();
+const cfg = readConfig(logger);
 const synctron = new Sync(cfg, logger);
 
 switch (args[0]) {

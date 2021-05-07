@@ -91,9 +91,46 @@ class File {
     this.fullpath = fullpath;
     this.lines = [];
   }
-
+  // fileString converts the array of lines into a string
   fileString() {
     return `${this.lines.join("\n")}\n`;
+  }
+}
+class ProgressBar {
+  constructor() {
+    this.bar = new progress.Bar(
+      {
+        format: `✂️ | {bar} | {percentage}% | {value}/{total} chunks | operation: {operation}`,
+      },
+      progress.Presets.shades_classic,
+    );
+    this.startValue = 0;
+    this.totalValue = 0;
+  }
+  // start sets the initial text display
+  start(operation) {
+    this.bar.start(this.totalValue, this.startValue, {
+      operation: `${operation}`,
+    });
+  }
+  // adds to the total chunks
+  updateTotal(valueAdd) {
+    this.totalValue = this.totalValue + valueAdd;
+    this.bar.setTotal(this.totalValue);
+  }
+  // increments completed chunks by 1
+  increment() {
+    this.bar.increment();
+  }
+  // updates the text display
+  updateOperation(operation) {
+    this.bar.update(
+      {operation: `${operation}`},
+    );
+  }
+  // stops the progress bar
+  stop() {
+    this.bar.stop();
   }
 }
 // Sync is the class of methods that can be used to do the following:
@@ -105,9 +142,11 @@ class Sync {
     this.logger = logger;
     const octokit = new Octokit();
     this.github = octokit;
+    this.progress = new ProgressBar();
   }
   // run is the main method of the Sync class that downloads, extracts, and merges snippets
   async run() {
+    this.progress.start('starting snipsync operations');
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
@@ -124,20 +163,27 @@ class Sync {
     await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
     await this.cleanUp();
-    this.logger.info("Snippet sync operation complete!");
+    this.progress.updateOperation('done');
+    this.progress.stop();
+    this.logger.info("snipsync operation complete");
     return;
   }
   // clear is the method that will remove snippets from target merge files
   async clear() {
+    this.progress.start('clearing snippets from files');
     const filePaths = await this.getTargetFilesInfos();
     const files = await this.getTargetFilesLines(filePaths);
     const filesToWrite = await this.clearSnippets(files);
     await this.writeFiles(filesToWrite);
-    this.logger.info("Snippets have been cleared.");
+    this.progress.updateOperation('done');
+    this.progress.stop();
+    this.logger.info("snippets have been cleared.");
   }
   // getRepos is the method that downloads all of the Github repos
   async getRepos() {
     const repositories = [];
+    this.progress.updateOperation('retrieving source files');
+    this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
         if ('files' in origin) {
@@ -155,24 +201,13 @@ class Sync {
         }
         const { owner, repo, ref } = origin;
         const repository = new Repo(owner, repo, ref);
-        const dlProgress = new progress.Bar(
-          {
-            format: fmtProgressBar(`downloading repo ${join(owner, repo)}`),
-            barsize: 20,
-          },
-          progress.Presets.shades_classic
-        );
-        dlProgress.start(3, 0);
         const byteArray = await this.getArchive(owner, repo, ref);
-        dlProgress.increment();
         const fileName = `${repo}.zip`;
         const buffer = arrayBuffToBuff(byteArray);
         await writeAsync(fileName, buffer);
-        dlProgress.increment();
         repository.filePaths = await this.unzip(fileName);
         repositories.push(repository);
-        dlProgress.increment();
-        dlProgress.stop();
+        this.progress.increment();
       })
     );
     return repositories;
@@ -198,19 +233,12 @@ class Sync {
   // extractSnippets returns an array of code snippets that are found in the repositories
   async extractSnippets(repositories) {
     const snippets = [];
+    this.progress.updateOperation('extracting snippets');
     await Promise.all(
       repositories.map(async ({ owner, repo, ref, filePaths }) => {
-        const extractSnippetProgress = new progress.Bar(
-          {
-            format: fmtProgressBar(`extracting snippets from ${owner}/${repo}`),
-            barsize: 20,
-          },
-          progress.Presets.shades_classic
-        );
-        extractSnippetProgress.start(filePaths.length + 1, 0);
+        this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
-          extractSnippetProgress.increment();
           const ext = determineExtension(item.name);
           let path = join(item.directory, item.name);
           if (!(owner === 'local' && repo === 'local')) {
@@ -235,52 +263,36 @@ class Sync {
             }
           });
           snippets.push(...fileSnips);
+          this.progress.increment();
         }
-        extractSnippetProgress.increment();
-        extractSnippetProgress.stop();
       })
     );
     return snippets;
   }
   // getTargetFilesInfos identifies the paths to the target write files
   async getTargetFilesInfos() {
-    const readTargetDirectoryProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("loading info for each target directory"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    readTargetDirectoryProgress.start(1, 0);
+    this.progress.updateOperation('gathering information of target files');
+    this.progress.updateTotal(this.config.targets.length);
     const targetFiles = [];
     for (const target of this.config.targets) {
       const targetDirPath = join(rootDir, target);
       for await (const entry of readdirp(targetDirPath)) {
         const file = new File(entry.basename, entry.fullPath);
         targetFiles.push(file);
-        readTargetDirectoryProgress.setTotal(targetFiles.length);
-        readTargetDirectoryProgress.increment();
       }
-      readTargetDirectoryProgress.stop();
+      this.progress.increment();
     }
     return targetFiles;
   }
   // getTargetFilesLines loops through the files and calls readLines on each one
   async getTargetFilesLines(targetFiles) {
-    const getInsertFilesProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("reading file lines for each target file"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    getInsertFilesProgress.start(targetFiles.length, 0);
+    this.progress.updateOperation('reading target files');
+    this.progress.updateTotal(targetFiles.length);
     const updatedFiles = [];
     for (const targetFile of targetFiles) {
       updatedFiles.push(await this.readLines(targetFile));
-      getInsertFilesProgress.increment();
+      this.progress.increment();
     }
-    getInsertFilesProgress.stop();
     return updatedFiles;
   }
   // readLines reads each line of the file
@@ -294,21 +306,14 @@ class Sync {
   }
   // spliceSnippets merges the snippet into the target location of a file
   async spliceSnippets(snippets, files) {
-    const spliceProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("starting splice operations"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    spliceProgress.start(snippets.length, 0);
+    this.progress.updateOperation('splicing snippets with targets');
+    this.progress.updateTotal(snippets.length);
     for (const snippet of snippets) {
-      spliceProgress.increment();
       for (let file of files) {
         file = await this.getSplicedFile(snippet, file);
       }
+      this.progress.increment();
     }
-    spliceProgress.stop();
     return files;
   }
   // getSplicedFile returns the the spliced file
@@ -351,19 +356,12 @@ class Sync {
   }
   // clearSnippets loops through target files to remove snippets
   async clearSnippets(files) {
-    const clearProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("starting clear operations"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    clearProgress.start(files.length, 0);
+    this.progress.updateOperation('removing splices');
+    this.progress.updateTotal(files.length);
     for (let file of files) {
       file = await this.getClearedFile(file);
-      clearProgress.increment();
+      this.progress.increment();
     }
-    clearProgress.stop();
     return files;
   }
   // getClearedFile removes snippet lines from a specific file
@@ -386,35 +384,22 @@ class Sync {
   }
   // writeFiles writes file lines to target files
   async writeFiles(files) {
-    const writeFileProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("writing files"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    writeFileProgress.start(files.length, 0);
+    this.progress.updateOperation('writing updated files');
+    this.progress.updateTotal(files.length);
     for (const file of files) {
       await writeAsync(file.fullpath, file.fileString());
-      writeFileProgress.increment();
+      this.progress.increment();
     }
-    writeFileProgress.stop();
     return;
   }
   // cleanUp deletes temporary files and folders
   async cleanUp() {
-    const cleanupProgress = new progress.Bar(
-      {
-        format: fmtProgressBar("cleaning up downloads"),
-        barsize: 20,
-      },
-      progress.Presets.shades_classic
-    );
-    cleanupProgress.start(1, 0);
+    this.progress.updateOperation('cleaning up');
+    this.progress.updateTotal(1);
     const path = join(rootDir, extractionDir);
     rimrafAsync(path);
-    cleanupProgress.update(1);
-    cleanupProgress.stop();
+    this.progress.increment();
+    return;
   }
 }
 // determineExtension returns the file extension
