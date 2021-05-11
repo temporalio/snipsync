@@ -19,8 +19,13 @@ yarn add snipsync
 Create a file called "snipsync.config.yaml" in the project root.
 This file specifies the following:
 
-- The Github repositories or local files where the tool will look for source code snippets.
-- The local directories that contain the files to be spliced with the code snippets.
+- `origins`: The Github repositories or local files where the tool will look for source code snippets.
+- `targets`: The local directories that contain the files to be spliced with the code snippets.
+
+The `origins` property is a list of objects that have one of the following 2 formats:
+
+1. `owner`, `repo`, and optionally `ref`: pull snippets from a GitHub repo
+2. `files`: array of strings containing relative paths to load snippets from. Supports [glob](https://www.npmjs.com/package/glob) syntax.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
