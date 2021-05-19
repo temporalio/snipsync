@@ -29,6 +29,7 @@ The `origins` property is a list of objects that have one of the following 2 for
 
 If the `ref` key is left blank or not specified, then the most recent commit from the master branch will be used.
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
+If the `enable_code_block` key in `features` is not specified, then it will default to `true`.
 
 Example of a complete snipsync.config.yaml:
 
@@ -48,6 +49,7 @@ targets:
 
 features:
   enable_source_link: false
+  enable_code_block: false
 ```
 
 Example of a bare minimum snipsync.config.yaml:
@@ -96,10 +98,10 @@ For example, if the source file ends in ".go" then the code section will be writ
 
 #### Per-snip features
 
-In order to customize how a single snip is rendered, put a custom feature configuration as JSON in the snip start line.
+To customize how a single snip is rendered, add a JSON feature configuration in the snip start line.
 
 ```md
-<!--SNIPSTART hellouniverse {"enable_source_link": false}-->
+<!--SNIPSTART hellouniverse {"enable_source_link": false, "enable_code_block": false}-->
 <!--SNIPEND-->
 ```
 
