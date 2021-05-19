@@ -441,16 +441,12 @@ function extractWriteIDAndConfig(line) {
 // overwriteConfig uses values if provided in the snippet placeholder
 function overwriteConfig(current, extracted) {
   let config = {};
-  if(extracted?.enable_source_link ?? true) {
-    config.enable_source_link = current.enable_source_link;
-  } else {
-    config.enable_source_link = extracted.enable_source_link;
-  }
-  if (extracted?.enable_code_block ?? true) {
-      config.enable_code_block = current.enable_code_block;
-  } else {
-    config.enable_code_block = extracted.enable_code_block;
-  }
+
+  config.enable_source_link = (extracted?.enable_source_link ?? true) ?
+    current.enable_source_link : extracted.enable_source_link;
+
+  config.enable_code_block = (extracted?.enable_code_block ?? true) ?
+    current.enable_code_block : extracted.enable_code_block;
 
   return config;
 }
