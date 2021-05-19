@@ -28,14 +28,18 @@ class Snippet {
     this.lines = [];
   }
   // fmt creates an array of file lines from the Snippet variables
-  fmt(fmtSourceLink) {
+  fmt(config) {
     const lines = [];
-    if (fmtSourceLink) {
+    if (config.enable_source_link) {
       lines.push(this.fmtSourceLink());
     }
-    lines.push(fmtStartCodeBlock(this.ext));
+    if(config.enable_code_block){
+      lines.push(fmtStartCodeBlock(this.ext));
+    }
     lines.push(...this.lines);
-    lines.push(markdownCodeTicks);
+    if(config.enable_code_block) {
+      lines.push(markdownCodeTicks);
+    }
     return lines;
   }
   // fmtSourceLink creates a markdown link to the source of the snippet
@@ -329,7 +333,7 @@ class Sync {
       if (line.includes(writeStart)) {
         const extracted = extractWriteIDAndConfig(line);
         if (extracted.id === snippet.id) {
-          config = extracted.config;
+          config = overwriteConfig(this.config.features, extracted.config);
           spliceStart = fileLineNumber;
           lookForStop = true;
         }
@@ -340,7 +344,7 @@ class Sync {
           fileLineNumber,
           snippet,
           dynamicFile,
-          config || this.config.features
+          config
         );
         lookForStop = false;
       }
@@ -351,7 +355,9 @@ class Sync {
   // spliceFile merges an individual snippet into the file
   async spliceFile(start, end, snippet, file, config) {
     const rmlines = end - start;
-    file.lines.splice(start, rmlines - 1, ...snippet.fmt(config.enable_source_link));
+    console.log("------------");
+    console.log(config)
+    file.lines.splice(start, rmlines - 1, ...snippet.fmt(config));
     return file;
   }
   // clearSnippets loops through target files to remove snippets
@@ -432,6 +438,23 @@ function extractReadID(line) {
 function extractWriteIDAndConfig(line) {
   const matches = line.match(writeMatchRegexp);
   return { id: matches[1], config: matches[2] ? JSON.parse(matches[2]) : undefined };
+}
+
+// overwriteConfig uses values if provided in the snippet placeholder
+function overwriteConfig(current, extracted) {
+  let config = {};
+  if(extracted?.enable_source_link ?? true) {
+    config.enable_source_link = current.enable_source_link;
+  } else {
+    config.enable_source_link = extracted.enable_source_link;
+  }
+  if (extracted?.enable_code_block ?? true) {
+      config.enable_code_block = current.enable_code_block;
+  } else {
+    config.enable_code_block = extracted.enable_code_block;
+  }
+
+  return config;
 }
 
 module.exports = { Sync };

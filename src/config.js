@@ -7,10 +7,15 @@ module.exports.readConfig = (logger) => {
   logger.info(`loading configuration from ${cfgPath}`);
   const cfg = sync(cfgPath);
 
-  //Enable source link is set to true if it isn't specified in the config
+  // Enable source links if not specified in the config
   if (cfg?.features?.enable_source_link ?? true) {
     cfg['features'] = {};
     cfg['features']['enable_source_link'] = true;
+  }
+
+  // Enable code blocks if not specified in the config
+  if (cfg?.features?.enable_code_block ?? true) {
+    cfg['features']['enable_code_block'] = true;
   }
 
   return cfg;
