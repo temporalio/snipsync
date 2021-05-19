@@ -355,8 +355,6 @@ class Sync {
   // spliceFile merges an individual snippet into the file
   async spliceFile(start, end, snippet, file, config) {
     const rmlines = end - start;
-    console.log("------------");
-    console.log(config)
     file.lines.splice(start, rmlines - 1, ...snippet.fmt(config));
     return file;
   }
