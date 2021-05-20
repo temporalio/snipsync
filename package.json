@@ -1,6 +1,6 @@
 {
   "name": "snipsync",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Sync docs with github repo code snippets",
   "main": "index.js",
   "repository": "git@github.com:temporalio/snippetsync.git",
