@@ -105,6 +105,27 @@ To customize how a single snip is rendered, add a JSON feature configuration in 
 <!--SNIPEND-->
 ```
 
+**Selected lines**
+
+A single source code snippet may be used in multiple places.
+If so, you may wish to customize which lines are rendered.
+Add a "selected" configuration to the snip start line.
+
+```
+<!--SNIPSTART hellouniverse {"selected": ["1", "3-5"]}-->
+```
+
+The feature supports multiple selections as either a single line or a range.
+
+**Highlighed lines**
+
+Some frameworks support highlighting code lines in code blocks.
+If so, you can add a "highlights" configuration to the snip start line.
+
+```
+<!--SNIPSTART hellouniverse {"highlights": "{1, 3-4}"}-->
+```
+
 ## Run
 
 From the root directory of your project run the following command:
