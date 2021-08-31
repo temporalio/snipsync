@@ -34,9 +34,18 @@ class Snippet {
       lines.push(this.fmtSourceLink());
     }
     if(config.enable_code_block){
-      lines.push(fmtStartCodeBlock(this.ext));
+      let textline = fmtStartCodeBlock(this.ext);
+      if(config.highlights !== undefined) {
+        textline = textline + " " + config.highlights;
+      }
+      lines.push(textline);
     }
-    lines.push(...this.lines);
+    if(config.select !== undefined) {
+      const selectedLines = selectLines(config.select, this.lines);
+      lines.push(...selectedLines);
+    } else {
+      lines.push(...this.lines);
+    }
     if(config.enable_code_block) {
       lines.push(markdownCodeTicks);
     }
@@ -448,7 +457,36 @@ function overwriteConfig(current, extracted) {
   config.enable_code_block = (extracted?.enable_code_block ?? true) ?
     current.enable_code_block : extracted.enable_code_block;
 
+  if (extracted?.highlights ?? undefined) {
+    config.highlights = extracted.highlights;
+  }
+
+  if (extracted?.select) {
+    config.select = extracted.select;
+  }
+
   return config;
+}
+
+function selectLines(selectNumbers, lines) {
+  let newLines = [];
+  for (const sn of selectNumbers) {
+    let skip = false;
+    let nums = [];
+    if (sn.includes("-")){
+      const strs = sn.split("-");
+      nums = [parseInt(strs[0]) - 1, parseInt(strs[1])];
+    } else {
+      const num = parseInt(sn);
+      nums = [num -1, num];
+    }
+    if(nums[0] != 0){
+      newLines.push("// ...");
+    }
+    const capture = lines.slice(nums[0], nums[1]);
+    newLines.push(...capture);
+  }
+  return newLines;
 }
 
 module.exports = { Sync };
