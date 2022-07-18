@@ -4,6 +4,7 @@ const { promisify } = require('util');
 const { eachLine } = require('line-reader');
 const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeStartClose, writeEnd } = require('./common');
 const { writeFile, unlink } = require('fs');
+const path = require('path');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
 const readdirp = require('readdirp');
@@ -278,11 +279,15 @@ class Sync {
     this.progress.updateOperation('gathering information of target files');
     this.progress.updateTotal(this.config.targets.length);
     const targetFiles = [];
+    const allowed_extensions = this.config.features.allowed_target_extensions;
     for (const target of this.config.targets) {
       const targetDirPath = join(rootDir, target);
       for await (const entry of readdirp(targetDirPath)) {
-        const file = new File(entry.basename, entry.fullPath);
-        targetFiles.push(file);
+        // include everything if the allowed exetnsions list is empty.
+        if (allowed_extensions.length === 0 || allowed_extensions.includes(path.extname(entry.basename))) {
+          const file = new File(entry.basename, entry.fullPath);
+          targetFiles.push(file);
+        }
       }
       this.progress.increment();
     }
