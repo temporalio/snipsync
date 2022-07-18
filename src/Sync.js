@@ -46,18 +46,18 @@ class Snippet {
   // fmtSourceLink creates a markdown link to the source of the snippet
   fmtSourceLink() {
     const url = this.buildURL();
-    const path = this.buildPath();
-    const link = `[${path}](${url})`;
+    const buildPath = this.buildPath();
+    const link = `[${buildPath}](${url})`;
     return link;
   }
   // buildPath creates a string that represents the relative path to the snippet
   buildPath() {
     const sourceURLParts = this.filePath.directory.split('/');
-    const path = [
+    const buildPath = [
       ...(sourceURLParts.slice(1, sourceURLParts.length)),
       this.filePath.name,
     ].join('/');
-    return path;
+    return buildPath;
   }
   // buildURL creates a url to the snippet source location
   buildURL() {
@@ -245,14 +245,14 @@ class Sync {
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
-          let path = join(item.directory, item.name);
+          let itemPath = join(item.directory, item.name);
           if (!(owner === 'local' && repo === 'local')) {
-            path = join(extractRootPath, path);
+            itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
-          await eachLineAsync(path, (line) => {
+          await eachLineAsync(itemPath, (line) => {
             if (line.includes(readEnd)) {
               capture = false;
               fileSnipsCount++;
@@ -405,15 +405,15 @@ class Sync {
   async cleanUp() {
     this.progress.updateOperation('cleaning up');
     this.progress.updateTotal(1);
-    const path = join(rootDir, extractionDir);
-    rimrafAsync(path);
+    const filePath = join(rootDir, extractionDir);
+    rimrafAsync(filePath);
     this.progress.increment();
     return;
   }
 }
 // determineExtension returns the file extension
-function determineExtension(path) {
-    const parts = path.split(".");
+function determineExtension(filePath) {
+    const parts = filePath.split(".");
     return parts[parts.length - 1];
 }
 
