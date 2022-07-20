@@ -227,11 +227,10 @@ class Sync {
   }
   // getArchive gets the Github repo archive from Github
   async getArchive(owner, repo, ref) {
-    const result = await this.github.repos.downloadArchive({
+    const result = await this.github.repos.downloadZipballArchive({
       owner,
       repo,
       ref,
-      archive_format: "zipball",
     });
     return result.data;
   }
