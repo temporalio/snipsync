@@ -31,7 +31,11 @@ If the `ref` key is left blank or not specified, then the most recent commit fro
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
 If the `enable_code_block` key in `features` is not specified, then it will default to `true`.
 
-Example of a complete snipsync.config.yaml:
+The `allowed_target_extensions` key in `features` lets you set a list of extensions to scan. Specify extensions like `[.md,.txt]`.
+If the `allowed_target_extensions` key in `features` is not specified, then it defaults to an empty array (`[]`) and all files are scanned. 
+
+
+Example of a complete `snipsync.config.yaml`:
 
 ```yaml
 origins:
@@ -50,6 +54,7 @@ targets:
 features:
   enable_source_link: false
   enable_code_block: false
+  allowed_target_extensions: [.md]
 ```
 
 Example of a bare minimum snipsync.config.yaml:
