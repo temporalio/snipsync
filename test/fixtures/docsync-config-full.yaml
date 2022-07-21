@@ -1,0 +1,12 @@
+origins:
+  - owner: temporalio
+    repo: samples-typescript
+
+targets:
+  - test/workspace
+
+features:
+  enable_source_link: true
+  enable_code_block: true
+  allowed_target_extensions: [.md]
+  enable_code_dedenting: true

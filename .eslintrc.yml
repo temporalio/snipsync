@@ -4,8 +4,11 @@ env:
   mocha: true
   node: true
 parser: "babel-eslint"
+plugins:
+  - jest
 extends:
   - "eslint:recommended"
+  - "plugin:jest/recommended"
 parserOptions:
   env:
     es6: true

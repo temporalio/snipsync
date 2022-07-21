@@ -8,7 +8,7 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "test": "echo \"tests are not available\" && exit 1",
+    "test": "jest",
     "dev": "node index.js",
     "lint": "eslint . --ext .js"
   },
@@ -34,6 +34,8 @@
   },
   "devDependencies": {
     "babel-eslint": "8.2.1",
-    "eslint": "^7.17.0"
+    "eslint": "^8.20.0",
+    "eslint-plugin-jest": "^26.6.0",
+    "jest": "^28.1.3"
   }
 }

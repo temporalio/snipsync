@@ -22,3 +22,6 @@ snipsync.config.yaml
 log
 *.log
 npm-debug.log*
+
+# Test stuff
+test/.tmp

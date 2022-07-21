@@ -2,8 +2,9 @@ const { join } = require('path');
 const { sync } = require('node-read-yaml');
 const { cfgFile, rootDir, fmtProgressBar } = require('./common');
 
-module.exports.readConfig = (logger) => {
-  const cfgPath = join(rootDir, cfgFile);
+module.exports.readConfig = (logger, file="") => {
+  // allow user to specify a configuration file path other than the default.
+  const cfgPath = file === "" ? join(rootDir, cfgFile) : file;
   logger.info(`loading configuration from ${cfgPath}`);
   const cfg = sync(cfgPath);
 
