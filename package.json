@@ -17,6 +17,7 @@
     "anzip": "^0.2.0",
     "arraybuffer-to-buffer": "^0.0.7",
     "cli-progress": "^3.8.2",
+    "dedent": "^0.7.0",
     "glob": "^7.1.6",
     "js-logger": "^1.6.1",
     "line-reader": "^0.4.0",
