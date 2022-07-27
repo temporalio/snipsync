@@ -1,0 +1,6 @@
+origins:
+  - owner: temporalio
+    repo: samples-typescript
+
+targets:
+  - test/workspace
