@@ -124,7 +124,7 @@ In some cases, you may want to remove the snippets from your target files.
 Use the `--clear` flag to do that:
 
 ```
-snipsync --clear
+yarn snipsync --clear
 ```
 
 ## Development
