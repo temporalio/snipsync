@@ -32,7 +32,7 @@ beforeEach(() => {
 
 
 afterAll(() => {
- fs.rmSync(tutorialsPath, { recursive: true });
+   fs.rmSync(tutorialsPath, { recursive: true });
 });
 
 test('Pulls snippet text into a file', async() => {
@@ -41,7 +41,6 @@ test('Pulls snippet text into a file', async() => {
   await synctron.run();
   const data = fs.readFileSync(`${tutorialsPath}/index.md`, 'utf8');
 
-  fs.copyFileSync(`${tutorialsPath}/index.md`,`${fixturesPath}/index_with_code.md`);
   expect(data).toMatch(/export async function greet/);
 
 });
@@ -132,3 +131,28 @@ test('Cleans snippets from all files', async() => {
   expect(data).not.toMatch(/export async function greet/);
 });
 
+test('uses regex patterns to pare down snippet inserted into a file', async() => {
+
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+      { owner: 'temporalio', repo: 'samples-typescript' },
+    ],
+
+  fs.copyFileSync(`${fixturesPath}/regex_index.md`,`${tutorialsPath}/regex_index.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/regex_index.md`, 'utf8');
+
+  // check go snippet
+  expect(data).not.toMatch(/func MoneyTransfer/);
+  expect(data).toMatch(/retrypolicy := &temporal\.RetryPolicy\{/);
+  expect(data).not.toMatch(/options := workflow.ActivityOptions/);
+
+
+  // check js snippet
+  expect(data).not.toMatch(/import type \* as activities/);
+  expect(data).toMatch(/const \{ greet/);
+  expect(data).not.toMatch(/export async function example/);
+
+});
