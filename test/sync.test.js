@@ -21,7 +21,6 @@ beforeEach(() => {
       enable_source_link: true,
       enable_code_block: true,
       allowed_target_extensions: [],
-      enable_code_dedenting: true,
     },
   };
 
@@ -31,7 +30,7 @@ beforeEach(() => {
 });
 
 
-afterAll(() => {
+afterEach(() => {
  fs.rmSync(tutorialsPath, { recursive: true });
 });
 
@@ -41,7 +40,6 @@ test('Pulls snippet text into a file', async() => {
   await synctron.run();
   const data = fs.readFileSync(`${tutorialsPath}/index.md`, 'utf8');
 
-  fs.copyFileSync(`${tutorialsPath}/index.md`,`${fixturesPath}/index_with_code.md`);
   expect(data).toMatch(/export async function greet/);
 
 });
@@ -131,4 +129,56 @@ test('Cleans snippets from all files', async() => {
   data = fs.readFileSync(`${tutorialsPath}/index.txt`, 'utf8');
   expect(data).not.toMatch(/export async function greet/);
 });
+
+test('Do not dedent snippets when option is false', async() => {
+
+  fs.copyFileSync(`${fixturesPath}/dedent.md`,`${tutorialsPath}/dedent.md`);
+
+  cfg.origins = [
+    { owner: 'temporalio', repo: 'samples-typescript' },
+  ];
+
+  cfg.features.enable_code_dedenting = false;
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+
+  let data = fs.readFileSync(`${tutorialsPath}/dedent.md`, 'utf8');
+  data = data.split("\n");
+
+  /*
+   * The code will start on the 4th line, as the 1st is the comment, second is the file link
+   * and the third is the code fence.
+   * The fourth line should have two spaces on the first line, as they should not be stripped.
+   */
+  expect(data[3]).toMatch(/^\s\s/);
+
+});
+
+test('Dedent snippets when option is set', async() => {
+
+  fs.copyFileSync(`${fixturesPath}/dedent.md`,`${tutorialsPath}/dedent.md`);
+
+  cfg.origins = [
+    { owner: 'temporalio', repo: 'samples-typescript' },
+  ];
+
+  cfg.features.enable_code_dedenting = true;
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+
+  let data = fs.readFileSync(`${tutorialsPath}/dedent.md`, 'utf8');
+  data = data.split("\n");
+
+  /*
+   * The code will start on the 4th line, as the 1st is the comment, second is the file link
+   * and the third is the code fence.
+   * The fourth line should NOT have two spaces at the start of the line, as they should be stripped.
+   */
+  expect(data[3]).not.toMatch(/^\s/);
+
+});
+
+
 

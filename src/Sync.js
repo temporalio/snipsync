@@ -4,6 +4,7 @@ const { promisify } = require('util');
 const { eachLine } = require('line-reader');
 const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeStartClose, writeEnd } = require('./common');
 const { writeFile, unlink } = require('fs');
+const dedent = require('dedent');
 const path = require('path');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
@@ -97,8 +98,14 @@ class File {
     this.lines = [];
   }
   // fileString converts the array of lines into a string
-  fileString() {
-    return `${this.lines.join("\n")}\n`;
+  fileString(dedentCode=false) {
+    let lines =  `${this.lines.join("\n")}\n`;
+
+    if(dedentCode){
+      lines = dedent(lines);
+    }
+
+    return lines;
   }
 }
 class ProgressBar {
@@ -395,7 +402,7 @@ class Sync {
     this.progress.updateOperation('writing updated files');
     this.progress.updateTotal(files.length);
     for (const file of files) {
-      await writeAsync(file.fullpath, file.fileString());
+      await writeAsync(file.fullpath, file.fileString(this.config.features.enable_code_dedenting));
       this.progress.increment();
     }
     return;

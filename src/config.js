@@ -29,5 +29,10 @@ module.exports.readConfig = (logger, file="") => {
     cfg['features']['allowed_target_extensions'] = [];
   }
 
+  // Disable code block dedenting by default if not specified
+  if (!Object.prototype.hasOwnProperty.call(cfg.features, 'enable_code_dedenting')) {
+    cfg['features']['enable_code_dedenting'] = false;
+  }
+
   return cfg;
 };

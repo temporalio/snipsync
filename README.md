@@ -34,6 +34,7 @@ If the `enable_code_block` key in `features` is not specified, then it will defa
 The `allowed_target_extensions` key in `features` lets you set a list of extensions to scan. Specify extensions like `[.md,.txt]`.
 If the `allowed_target_extensions` key in `features` is not specified, then it defaults to an empty array (`[]`) and all files are scanned. 
 
+The `enable_code_dedenting` key in `features` lets you remove leading spaces from indented code snippets. This is handy when you're including a snippet of code within a class or function and don't want to include the leading indentation. This is `false` by default. 
 
 Example of a complete `snipsync.config.yaml`:
 
@@ -55,6 +56,7 @@ features:
   enable_source_link: false
   enable_code_block: false
   allowed_target_extensions: [.md]
+  enable_code_dedenting: false
 ```
 
 Example of a bare minimum snipsync.config.yaml:
