@@ -117,7 +117,7 @@ To customize how a single snip is rendered, add a JSON feature configuration in 
 From the root directory of your project run the following command:
 
 ```bash
-snipsync
+yarn snipsync
 ```
 
 ### Remove snippets
@@ -126,7 +126,7 @@ In some cases, you may want to remove the snippets from your target files.
 Use the `--clear` flag to do that:
 
 ```
-snipsync --clear
+yarn snipsync --clear
 ```
 
 ## Development
