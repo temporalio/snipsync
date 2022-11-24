@@ -4,6 +4,8 @@ const { promisify } = require('util');
 const { eachLine } = require('line-reader');
 const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeStartClose, writeEnd } = require('./common');
 const { writeFile, unlink } = require('fs');
+const dedent = require('dedent');
+const path = require('path');
 const arrayBuffToBuff = require('arraybuffer-to-buffer');
 const anzip = require('anzip');
 const readdirp = require('readdirp');
@@ -54,18 +56,18 @@ class Snippet {
   // fmtSourceLink creates a markdown link to the source of the snippet
   fmtSourceLink() {
     const url = this.buildURL();
-    const path = this.buildPath();
-    const link = `[${path}](${url})`;
+    const buildPath = this.buildPath();
+    const link = `[${buildPath}](${url})`;
     return link;
   }
   // buildPath creates a string that represents the relative path to the snippet
   buildPath() {
     const sourceURLParts = this.filePath.directory.split('/');
-    const path = [
+    const buildPath = [
       ...(sourceURLParts.slice(1, sourceURLParts.length)),
       this.filePath.name,
     ].join('/');
-    return path;
+    return buildPath;
   }
   // buildURL creates a url to the snippet source location
   buildURL() {
@@ -105,8 +107,14 @@ class File {
     this.lines = [];
   }
   // fileString converts the array of lines into a string
-  fileString() {
-    return `${this.lines.join("\n")}\n`;
+  fileString(dedentCode=false) {
+    let lines =  `${this.lines.join("\n")}\n`;
+
+    if(dedentCode){
+      lines = dedent(lines);
+    }
+
+    return lines;
   }
 }
 class ProgressBar {
@@ -235,11 +243,10 @@ class Sync {
   }
   // getArchive gets the Github repo archive from Github
   async getArchive(owner, repo, ref) {
-    const result = await this.github.repos.downloadArchive({
+    const result = await this.github.repos.downloadZipballArchive({
       owner,
       repo,
       ref,
-      archive_format: "zipball",
     });
     return result.data;
   }
@@ -253,14 +260,14 @@ class Sync {
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
-          let path = join(item.directory, item.name);
+          let itemPath = join(item.directory, item.name);
           if (!(owner === 'local' && repo === 'local')) {
-            path = join(extractRootPath, path);
+            itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
-          await eachLineAsync(path, (line) => {
+          await eachLineAsync(itemPath, (line) => {
             if (line.includes(readEnd)) {
               capture = false;
               fileSnipsCount++;
@@ -287,11 +294,15 @@ class Sync {
     this.progress.updateOperation('gathering information of target files');
     this.progress.updateTotal(this.config.targets.length);
     const targetFiles = [];
+    const allowed_extensions = this.config.features.allowed_target_extensions;
     for (const target of this.config.targets) {
       const targetDirPath = join(rootDir, target);
       for await (const entry of readdirp(targetDirPath)) {
-        const file = new File(entry.basename, entry.fullPath);
-        targetFiles.push(file);
+        // include everything if the allowed exetnsions list is empty.
+        if (allowed_extensions.length === 0 || allowed_extensions.includes(path.extname(entry.basename))) {
+          const file = new File(entry.basename, entry.fullPath);
+          targetFiles.push(file);
+        }
       }
       this.progress.increment();
     }
@@ -400,7 +411,7 @@ class Sync {
     this.progress.updateOperation('writing updated files');
     this.progress.updateTotal(files.length);
     for (const file of files) {
-      await writeAsync(file.fullpath, file.fileString());
+      await writeAsync(file.fullpath, file.fileString(this.config.features.enable_code_dedenting));
       this.progress.increment();
     }
     return;
@@ -409,15 +420,15 @@ class Sync {
   async cleanUp() {
     this.progress.updateOperation('cleaning up');
     this.progress.updateTotal(1);
-    const path = join(rootDir, extractionDir);
-    rimrafAsync(path);
+    const filePath = join(rootDir, extractionDir);
+    rimrafAsync(filePath);
     this.progress.increment();
     return;
   }
 }
 // determineExtension returns the file extension
-function determineExtension(path) {
-    const parts = path.split(".");
+function determineExtension(filePath) {
+    const parts = filePath.split(".");
     return parts[parts.length - 1];
 }
 
