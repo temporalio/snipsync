@@ -180,5 +180,18 @@ test('Dedent snippets when option is set', async() => {
 
 });
 
+test('use select lines configuration to specify exact lines', async() => {
 
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+    ],
 
+  fs.copyFileSync(`${fixturesPath}/select.md`,`${tutorialsPath}/select.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/select.md`, 'utf8');
+  const expected = fs.readFileSync(`test/expected-select.md`, 'utf8');
+  expect(data).toMatch(expected);
+
+});

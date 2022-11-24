@@ -119,7 +119,7 @@ If so, you may wish to customize which lines are rendered.
 Add a "selected" configuration to the snip start line.
 
 ```
-<!--SNIPSTART hellouniverse {"selected": ["1", "3-5"]}-->
+<!--SNIPSTART hellouniverse {"select": ["1", "3-5"]}-->
 ```
 
 The feature supports multiple selections as either a single line or a range.
