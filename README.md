@@ -119,8 +119,10 @@ If so, you may wish to customize which lines are rendered.
 Add a "selected" configuration to the snip start line.
 
 ```
-<!--SNIPSTART hellouniverse {"select": ["1", "3-5"]}-->
+<!--SNIPSTART hellouniverse {"selectedLines": ["1", "3-5"]}-->
 ```
+
+The line numbers are **relative** to the snippet, not the source file.
 
 The feature supports multiple selections as either a single line or a range.
 
@@ -132,6 +134,11 @@ If so, you can add a "highlights" configuration to the snip start line.
 ```
 <!--SNIPSTART hellouniverse {"highlights": "{1, 3-4}"}-->
 ```
+
+The line numbers are relative to the published snippet.
+That means that if selectedLines is used, the line numbers to highlight are relative to the pared down selection that is merged into the Markdown file.
+
+If you use Docusuarus, you just need to add some additional CSS: https://docusaurus.io/docs/markdown-features/code-blocks#line-highlighting
 
 ## Run
 

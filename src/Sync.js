@@ -38,7 +38,7 @@ class Snippet {
     if(config.enable_code_block){
       let textline = fmtStartCodeBlock(this.ext);
       if(config.highlights !== undefined) {
-        textline = textline + " " + config.highlights;
+        textline = `${textline} {${config.highlights}}`;
       }
       lines.push(textline);
     }
@@ -468,12 +468,12 @@ function overwriteConfig(current, extracted) {
   config.enable_code_block = (extracted?.enable_code_block ?? true) ?
     current.enable_code_block : extracted.enable_code_block;
 
-  if (extracted?.highlights ?? undefined) {
-    config.highlights = extracted.highlights;
+  if (extracted?.highlightedLines ?? undefined) {
+    config.highlights = extracted.highlightedLines;
   }
 
-  if (extracted?.select) {
-    config.select = extracted.select;
+  if (extracted?.selectedLines) {
+    config.select = extracted.selectedLines;
   }
 
   return config;
