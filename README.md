@@ -132,7 +132,7 @@ Some frameworks support highlighting code lines in code blocks.
 If so, you can add a "highlights" configuration to the snip start line.
 
 ```
-<!--SNIPSTART hellouniverse {"highlights": "{1, 3-4}"}-->
+<!--SNIPSTART hellouniverse {"highlightedLines": "{1, 3-4}"}-->
 ```
 
 The line numbers are relative to the published snippet.
