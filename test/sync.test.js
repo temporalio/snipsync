@@ -180,5 +180,34 @@ test('Dedent snippets when option is set', async() => {
 
 });
 
+test('Per snippet selectedLines configuration', async() => {
 
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+    ],
 
+  fs.copyFileSync(`${fixturesPath}/select.md`,`${tutorialsPath}/select.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/select.md`, 'utf8');
+  const expected = fs.readFileSync(`test/fixtures/expected-select.md`, 'utf8');
+  expect(data).toMatch(expected);
+
+});
+
+test('Per snippet highlightedLines configuration', async() => {
+
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+    ],
+
+  fs.copyFileSync(`${fixturesPath}/highlight.md`,`${tutorialsPath}/highlight.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/highlight.md`, 'utf8');
+  const expected = fs.readFileSync(`test/fixtures/expected-highlight.md`, 'utf8');
+  expect(data).toMatch(expected);
+
+});
