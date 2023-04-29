@@ -1,17 +1,28 @@
-const { join, basename, dirname } = require('path');
-const { Octokit } = require('@octokit/rest');
-const { promisify } = require('util');
-const { eachLine } = require('line-reader');
-const { fmtStartCodeBlock, markdownCodeTicks,extractionDir, fmtProgressBar, readStart, readEnd, rootDir, writeStart, writeStartClose, writeEnd } = require('./common');
-const { writeFile, unlink } = require('fs');
-const dedent = require('dedent');
-const path = require('path');
-const arrayBuffToBuff = require('arraybuffer-to-buffer');
-const anzip = require('anzip');
-const readdirp = require('readdirp');
-const rimraf = require('rimraf');
-const progress = require('cli-progress');
-const glob = require('glob');
+const { join, basename, dirname } = require("path");
+const { Octokit } = require("@octokit/rest");
+const { promisify } = require("util");
+const { eachLine } = require("line-reader");
+const {
+  fmtStartCodeBlock,
+  markdownCodeTicks,
+  extractionDir,
+  fmtProgressBar,
+  readStart,
+  readEnd,
+  rootDir,
+  writeStart,
+  writeStartClose,
+  writeEnd,
+} = require("./common");
+const { writeFile, unlink } = require("fs");
+const dedent = require("dedent");
+const path = require("path");
+const arrayBuffToBuff = require("arraybuffer-to-buffer");
+const anzip = require("anzip");
+const readdirp = require("readdirp");
+const rimraf = require("rimraf");
+const progress = require("cli-progress");
+const glob = require("glob");
 
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
@@ -20,7 +31,7 @@ const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
-  constructor (id, ext, owner, repo, ref, filePath) {
+  constructor(id, ext, owner, repo, ref, filePath) {
     this.id = id;
     this.ext = ext;
     this.owner = owner;
@@ -35,20 +46,20 @@ class Snippet {
     if (config.enable_source_link) {
       lines.push(this.fmtSourceLink());
     }
-    if(config.enable_code_block){
+    if (config.enable_code_block) {
       let textline = fmtStartCodeBlock(this.ext);
-      if(config.highlights !== undefined) {
+      if (config.highlights !== undefined) {
         textline = `${textline} {${config.highlights}}`;
       }
       lines.push(textline);
     }
-    if(config.select !== undefined) {
+    if (config.select !== undefined) {
       const selectedLines = selectLines(config.select, this.lines);
       lines.push(...selectedLines);
     } else {
       lines.push(...this.lines);
     }
-    if(config.enable_code_block) {
+    if (config.enable_code_block) {
       lines.push(markdownCodeTicks);
     }
     return lines;
@@ -62,16 +73,16 @@ class Snippet {
   }
   // buildPath creates a string that represents the relative path to the snippet
   buildPath() {
-    const sourceURLParts = this.filePath.directory.split('/');
+    const sourceURLParts = this.filePath.directory.split("/");
     const buildPath = [
-      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      ...sourceURLParts.slice(1, sourceURLParts.length),
       this.filePath.name,
-    ].join('/');
+    ].join("/");
     return buildPath;
   }
   // buildURL creates a url to the snippet source location
   buildURL() {
-    const sourceURLParts = this.filePath.directory.split('/');
+    const sourceURLParts = this.filePath.directory.split("/");
     let ref = "";
     if (this.ref !== "" && this.ref !== undefined) {
       ref = this.ref;
@@ -79,14 +90,14 @@ class Snippet {
       ref = "master";
     }
     const url = [
-      'https://github.com',
+      "https://github.com",
       this.owner,
       this.repo,
       "blob",
       ref,
-      ...(sourceURLParts.slice(1, sourceURLParts.length)),
+      ...sourceURLParts.slice(1, sourceURLParts.length),
       this.filePath.name,
-    ].join('/');
+    ].join("/");
     return url;
   }
 }
@@ -107,10 +118,10 @@ class File {
     this.lines = [];
   }
   // fileString converts the array of lines into a string
-  fileString(dedentCode=false) {
-    let lines =  `${this.lines.join("\n")}\n`;
+  fileString(dedentCode = false) {
+    let lines = `${this.lines.join("\n")}\n`;
 
-    if(dedentCode){
+    if (dedentCode) {
       lines = dedent(lines);
     }
 
@@ -123,7 +134,7 @@ class ProgressBar {
       {
         format: `✂️ | {bar} | {percentage}% | {value}/{total} chunks | operation: {operation}`,
       },
-      progress.Presets.shades_classic,
+      progress.Presets.shades_classic
     );
     this.startValue = 0;
     this.totalValue = 0;
@@ -145,9 +156,7 @@ class ProgressBar {
   }
   // updates the text display
   updateOperation(operation) {
-    this.bar.update(
-      {operation: `${operation}`},
-    );
+    this.bar.update({ operation: `${operation}` });
   }
   // stops the progress bar
   stop() {
@@ -167,7 +176,7 @@ class Sync {
   }
   // run is the main method of the Sync class that downloads, extracts, and merges snippets
   async run() {
-    this.progress.start('starting snipsync operations');
+    this.progress.start("starting snipsync operations");
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
@@ -184,40 +193,43 @@ class Sync {
     await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
     await this.cleanUp();
-    this.progress.updateOperation('done');
+    this.progress.updateOperation("done");
     this.progress.stop();
     this.logger.info("snipsync operation complete");
     return;
   }
   // clear is the method that will remove snippets from target merge files
   async clear() {
-    this.progress.start('clearing snippets from files');
+    this.progress.start("clearing snippets from files");
     const filePaths = await this.getTargetFilesInfos();
     const files = await this.getTargetFilesLines(filePaths);
     const filesToWrite = await this.clearSnippets(files);
     await this.writeFiles(filesToWrite);
-    this.progress.updateOperation('done');
+    this.progress.updateOperation("done");
     this.progress.stop();
     this.logger.info("snippets have been cleared.");
   }
   // getRepos is the method that downloads all of the Github repos
   async getRepos() {
     const repositories = [];
-    this.progress.updateOperation('retrieving source files');
+    this.progress.updateOperation("retrieving source files");
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
-        if ('files' in origin) {
+        if ("files" in origin) {
           repositories.push({
-            owner: 'local',
-            repo: 'local',
-            filePaths: origin.files.flatMap((pattern) => glob.sync(pattern).map((f) => ({
-              name: basename(f), directory: dirname(f),
-            }))),
+            owner: "local",
+            repo: "local",
+            filePaths: origin.files.flatMap((pattern) =>
+              glob.sync(pattern).map((f) => ({
+                name: basename(f),
+                directory: dirname(f),
+              }))
+            ),
           });
           return;
         }
-        if (!('owner' in origin && 'repo' in origin)) {
+        if (!("owner" in origin && "repo" in origin)) {
           throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
         }
         const { owner, repo, ref } = origin;
@@ -253,7 +265,7 @@ class Sync {
   // extractSnippets returns an array of code snippets that are found in the repositories
   async extractSnippets(repositories) {
     const snippets = [];
-    this.progress.updateOperation('extracting snippets');
+    this.progress.updateOperation("extracting snippets");
     await Promise.all(
       repositories.map(async ({ owner, repo, ref, filePaths }) => {
         this.progress.updateTotal(filePaths.length);
@@ -261,7 +273,7 @@ class Sync {
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
-          if (!(owner === 'local' && repo === 'local')) {
+          if (!(owner === "local" && repo === "local")) {
             itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
@@ -291,7 +303,7 @@ class Sync {
   }
   // getTargetFilesInfos identifies the paths to the target write files
   async getTargetFilesInfos() {
-    this.progress.updateOperation('gathering information of target files');
+    this.progress.updateOperation("gathering information of target files");
     this.progress.updateTotal(this.config.targets.length);
     const targetFiles = [];
     const allowed_extensions = this.config.features.allowed_target_extensions;
@@ -299,7 +311,10 @@ class Sync {
       const targetDirPath = join(rootDir, target);
       for await (const entry of readdirp(targetDirPath)) {
         // include everything if the allowed exetnsions list is empty.
-        if (allowed_extensions.length === 0 || allowed_extensions.includes(path.extname(entry.basename))) {
+        if (
+          allowed_extensions.length === 0 ||
+          allowed_extensions.includes(path.extname(entry.basename))
+        ) {
           const file = new File(entry.basename, entry.fullPath);
           targetFiles.push(file);
         }
@@ -310,7 +325,7 @@ class Sync {
   }
   // getTargetFilesLines loops through the files and calls readLines on each one
   async getTargetFilesLines(targetFiles) {
-    this.progress.updateOperation('reading target files');
+    this.progress.updateOperation("reading target files");
     this.progress.updateTotal(targetFiles.length);
     const updatedFiles = [];
     for (const targetFile of targetFiles) {
@@ -330,7 +345,7 @@ class Sync {
   }
   // spliceSnippets merges the snippet into the target location of a file
   async spliceSnippets(snippets, files) {
-    this.progress.updateOperation('splicing snippets with targets');
+    this.progress.updateOperation("splicing snippets with targets");
     this.progress.updateTotal(snippets.length);
     for (const snippet of snippets) {
       for (let file of files) {
@@ -380,7 +395,7 @@ class Sync {
   }
   // clearSnippets loops through target files to remove snippets
   async clearSnippets(files) {
-    this.progress.updateOperation('removing splices');
+    this.progress.updateOperation("removing splices");
     this.progress.updateTotal(files.length);
     for (let file of files) {
       file = await this.getClearedFile(file);
@@ -408,17 +423,20 @@ class Sync {
   }
   // writeFiles writes file lines to target files
   async writeFiles(files) {
-    this.progress.updateOperation('writing updated files');
+    this.progress.updateOperation("writing updated files");
     this.progress.updateTotal(files.length);
     for (const file of files) {
-      await writeAsync(file.fullpath, file.fileString(this.config.features.enable_code_dedenting));
+      await writeAsync(
+        file.fullpath,
+        file.fileString(this.config.features.enable_code_dedenting)
+      );
       this.progress.increment();
     }
     return;
   }
   // cleanUp deletes temporary files and folders
   async cleanUp() {
-    this.progress.updateOperation('cleaning up');
+    this.progress.updateOperation("cleaning up");
     this.progress.updateTotal(1);
     const filePath = join(rootDir, extractionDir);
     rimrafAsync(filePath);
@@ -428,23 +446,24 @@ class Sync {
 }
 // determineExtension returns the file extension
 function determineExtension(filePath) {
-    const parts = filePath.split(".");
-    return parts[parts.length - 1];
+  const parts = filePath.split(".");
+  return parts[parts.length - 1];
 }
 
 // See: https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
 function escapeStringRegexp(string) {
-  return string
-    .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
-    .replace(/-/g, '\\x2d');
+  return string.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-const readMatchRegexp = new RegExp(escapeStringRegexp(readStart) + /\s+(\S+)/.source);
+const readMatchRegexp = new RegExp(
+  escapeStringRegexp(readStart) + /\s+(\S+)/.source
+);
 
 const writeMatchRegexp = new RegExp(
-  escapeStringRegexp(writeStart)
-  + /\s+(\S+)(?:\s+(.+))?\s*/.source
-  + escapeStringRegexp(writeStartClose));
+  escapeStringRegexp(writeStart) +
+    /\s+(\S+)(?:\s+(.+))?\s*/.source +
+    escapeStringRegexp(writeStartClose)
+);
 
 // extractReadID uses regex to exract the id from a string
 function extractReadID(line) {
@@ -455,18 +474,25 @@ function extractReadID(line) {
 // extractWriteIDAndConfig uses regex to exract the id from a string
 function extractWriteIDAndConfig(line) {
   const matches = line.match(writeMatchRegexp);
-  return { id: matches[1], config: matches[2] ? JSON.parse(matches[2]) : undefined };
+  return {
+    id: matches[1],
+    config: matches[2] ? JSON.parse(matches[2]) : undefined,
+  };
 }
 
 // overwriteConfig uses values if provided in the snippet placeholder
 function overwriteConfig(current, extracted) {
   let config = {};
 
-  config.enable_source_link = (extracted?.enable_source_link ?? true) ?
-    current.enable_source_link : extracted.enable_source_link;
+  config.enable_source_link =
+    extracted?.enable_source_link ?? true
+      ? current.enable_source_link
+      : extracted.enable_source_link;
 
-  config.enable_code_block = (extracted?.enable_code_block ?? true) ?
-    current.enable_code_block : extracted.enable_code_block;
+  config.enable_code_block =
+    extracted?.enable_code_block ?? true
+      ? current.enable_code_block
+      : extracted.enable_code_block;
 
   if (extracted?.highlightedLines ?? undefined) {
     config.highlights = extracted.highlightedLines;
@@ -479,20 +505,21 @@ function overwriteConfig(current, extracted) {
   return config;
 }
 
-function selectLines(selectNumbers, lines) {
+function selectLines(selectNumbers, lines, fileExtension) {
   let newLines = [];
+  const commentChar = fileExtension === "py" ? "#" : "//";
   for (const sn of selectNumbers) {
     let skip = false;
     let nums = [];
-    if (sn.includes("-")){
+    if (sn.includes("-")) {
       const strs = sn.split("-");
       nums = [parseInt(strs[0]) - 1, parseInt(strs[1])];
     } else {
       const num = parseInt(sn);
-      nums = [num -1, num];
+      nums = [num - 1, num];
     }
-    if(nums[0] != 0){
-      newLines.push("// ...");
+    if (nums[0] != 0) {
+      newLines.push(`${commentChar} ...`);
     }
     const capture = lines.slice(nums[0], nums[1]);
     newLines.push(...capture);
