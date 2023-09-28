@@ -505,8 +505,18 @@ function overwriteConfig(current, extracted) {
   return config;
 }
 
-function selectLines(selectNumbers, lines) {
+function selectLines(selectNumbers, lines, fileExtension) {
   let newLines = [];
+  const commentList = {
+    py: "# ...",
+    rb: "# ...",
+    yaml: "# ...",
+    css: "/* ... */",
+    html: "<!-- ...  -->",
+    xml: "<!-- ...  -->",
+    bash: "# ...",
+  };
+  const ellipsisComment = commentList[fileExtension] || "// ...";
   for (const sn of selectNumbers) {
     let skip = false;
     let nums = [];
@@ -518,7 +528,7 @@ function selectLines(selectNumbers, lines) {
       nums = [num - 1, num];
     }
     if (nums[0] != 0) {
-      newLines.push("// ...");
+      newLines.push(`${ellipsisComment}`);
     }
     const capture = lines.slice(nums[0], nums[1]);
     newLines.push(...capture);
