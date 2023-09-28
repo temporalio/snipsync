@@ -87,7 +87,7 @@ class Snippet {
     if (this.ref !== "" && this.ref !== undefined) {
       ref = this.ref;
     } else {
-      ref = "master";
+      ref = "main";
     }
     const url = [
       "https://github.com",
