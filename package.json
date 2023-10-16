@@ -34,7 +34,7 @@
     "snipsync": "index.js"
   },
   "devDependencies": {
-    "babel-eslint": "8.2.1",
+    "babel-eslint": "10.1.0",
     "eslint": "^8.20.0",
     "eslint-plugin-jest": "^26.6.0",
     "jest": "^28.1.3"
