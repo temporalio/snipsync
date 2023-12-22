@@ -56,8 +56,6 @@ class Snippet {
     if (config.select !== undefined) {
       const selectedLines = selectLines(config.select, this.lines);
       lines.push(...selectedLines);
-    } else {
-      lines.push(...this.lines);
     }
 
     // if there's no start/end pattern, there's nothing to parse.
