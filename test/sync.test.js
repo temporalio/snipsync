@@ -21,7 +21,6 @@ beforeEach(() => {
       enable_source_link: true,
       enable_code_block: true,
       allowed_target_extensions: [],
-      enable_code_dedenting: true,
     },
   };
 
@@ -154,5 +153,87 @@ test('uses regex patterns to pare down snippet inserted into a file', async() =>
   expect(data).not.toMatch(/import type \* as activities/);
   expect(data).toMatch(/const \{ greet/);
   expect(data).not.toMatch(/export async function example/);
+  
+});
+
+test('Do not dedent snippets when option is false', async() => {
+
+  fs.copyFileSync(`${fixturesPath}/dedent.md`,`${tutorialsPath}/dedent.md`);
+
+  cfg.origins = [
+    { owner: 'temporalio', repo: 'samples-typescript' },
+  ];
+
+  cfg.features.enable_code_dedenting = false;
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+
+  let data = fs.readFileSync(`${tutorialsPath}/dedent.md`, 'utf8');
+  data = data.split("\n");
+
+  /*
+   * The code will start on the 4th line, as the 1st is the comment, second is the file link
+   * and the third is the code fence.
+   * The fourth line should have two spaces on the first line, as they should not be stripped.
+   */
+  expect(data[3]).toMatch(/^\s\s/);
+
+});
+
+test('Dedent snippets when option is set', async() => {
+
+  fs.copyFileSync(`${fixturesPath}/dedent.md`,`${tutorialsPath}/dedent.md`);
+
+  cfg.origins = [
+    { owner: 'temporalio', repo: 'samples-typescript' },
+  ];
+
+  cfg.features.enable_code_dedenting = true;
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+
+  let data = fs.readFileSync(`${tutorialsPath}/dedent.md`, 'utf8');
+  data = data.split("\n");
+
+  /*
+   * The code will start on the 4th line, as the 1st is the comment, second is the file link
+   * and the third is the code fence.
+   * The fourth line should NOT have two spaces at the start of the line, as they should be stripped.
+   */
+  expect(data[3]).not.toMatch(/^\s/);
+
+});
+
+test('Per snippet selectedLines configuration', async() => {
+
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+    ],
+
+  fs.copyFileSync(`${fixturesPath}/select.md`,`${tutorialsPath}/select.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/select.md`, 'utf8');
+  const expected = fs.readFileSync(`test/fixtures/expected-select.md`, 'utf8');
+  expect(data).toMatch(expected);
+
+});
+
+test('Per snippet highlightedLines configuration', async() => {
+
+  cfg.origins = [
+      { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+    ],
+
+  fs.copyFileSync(`${fixturesPath}/highlight.md`,`${tutorialsPath}/highlight.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${tutorialsPath}/highlight.md`, 'utf8');
+  const expected = fs.readFileSync(`test/fixtures/expected-highlight.md`, 'utf8');
+  expect(data).toMatch(expected);
 
 });

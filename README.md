@@ -34,6 +34,7 @@ If the `enable_code_block` key in `features` is not specified, then it will defa
 The `allowed_target_extensions` key in `features` lets you set a list of extensions to scan. Specify extensions like `[.md,.txt]`.
 If the `allowed_target_extensions` key in `features` is not specified, then it defaults to an empty array (`[]`) and all files are scanned. 
 
+The `enable_code_dedenting` key in `features` lets you remove leading spaces from indented code snippets. This is handy when you're including a snippet of code within a class or function and don't want to include the leading indentation. This is `false` by default. 
 
 Example of a complete `snipsync.config.yaml`:
 
@@ -55,6 +56,7 @@ features:
   enable_source_link: false
   enable_code_block: false
   allowed_target_extensions: [.md]
+  enable_code_dedenting: false
 ```
 
 Example of a bare minimum snipsync.config.yaml:
@@ -110,12 +112,40 @@ To customize how a single snip is rendered, add a JSON feature configuration in 
 <!--SNIPEND-->
 ```
 
+**Selected lines**
+
+A single source code snippet may be used in multiple places.
+If so, you may wish to customize which lines are rendered.
+Add a "selected" configuration to the snip start line.
+
+```
+<!--SNIPSTART hellouniverse {"selectedLines": ["1", "3-5"]}-->
+```
+
+The line numbers are **relative** to the snippet, not the source file.
+
+The feature supports multiple selections as either a single line or a range.
+
+**Highlighed lines**
+
+Some frameworks support highlighting code lines in code blocks.
+If so, you can add a "highlights" configuration to the snip start line.
+
+```
+<!--SNIPSTART hellouniverse {"highlightedLines": "{1, 3-4}"}-->
+```
+
+The line numbers are relative to the published snippet.
+That means that if selectedLines is used, the line numbers to highlight are relative to the pared down selection that is merged into the Markdown file.
+
+If you use Docusuarus, you just need to add some additional CSS: https://docusaurus.io/docs/markdown-features/code-blocks#line-highlighting
+
 ## Run
 
 From the root directory of your project run the following command:
 
 ```bash
-snipsync
+yarn snipsync
 ```
 
 ### Remove snippets
@@ -124,7 +154,7 @@ In some cases, you may want to remove the snippets from your target files.
 Use the `--clear` flag to do that:
 
 ```
-snipsync --clear
+yarn snipsync --clear
 ```
 
 ## Development
