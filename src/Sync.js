@@ -56,14 +56,29 @@ class Snippet {
     if (config.select !== undefined) {
       const selectedLines = selectLines(config.select, this.lines);
       lines.push(...selectedLines);
-    } else {
-      lines.push(...this.lines);
     }
+
+    // if there's no start/end pattern, there's nothing to parse.
+    if(!config.startPattern && !config.endPattern ) {
+      lines.push(...this.lines);
+    }else{
+      // use the patterns to grab the content specified.
+
+      const pattern = new RegExp(`(${config.startPattern}[\\s\\S]+${config.endPattern})`);
+      const match = this.lines.join("\n").match(pattern);
+
+      if (match !== null) {
+        let filteredLines = match[1].split("\n");
+        lines.push(...filteredLines);
+      }
+    }
+
     if (config.enable_code_block) {
       lines.push(markdownCodeTicks);
     }
     return lines;
   }
+
   // fmtSourceLink creates a markdown link to the source of the snippet
   fmtSourceLink() {
     const url = this.buildURL();
@@ -471,13 +486,19 @@ function extractReadID(line) {
   return matches[1];
 }
 
-// extractWriteIDAndConfig uses regex to exract the id from a string
+// extractWriteIDAndConfig uses regex to extract the id from a string
 function extractWriteIDAndConfig(line) {
   const matches = line.match(writeMatchRegexp);
-  return {
-    id: matches[1],
-    config: matches[2] ? JSON.parse(matches[2]) : undefined,
-  };
+  let id = matches[1];
+  let config = {};
+  try {
+    config =  matches[2] ? JSON.parse(matches[2]) : undefined ;
+  } catch {
+    console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
+    config = undefined;
+  }
+
+  return {id, config};
 }
 
 // overwriteConfig uses values if provided in the snippet placeholder
@@ -501,6 +522,9 @@ function overwriteConfig(current, extracted) {
   if (extracted?.selectedLines) {
     config.select = extracted.selectedLines;
   }
+
+  config.startPattern = (extracted?.startPattern ?? false) ? extracted.startPattern : false;
+  config.endPattern = (extracted?.endPattern ?? false) ? extracted.endPattern : false;
 
   return config;
 }
