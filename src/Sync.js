@@ -23,6 +23,7 @@ const readdirp = require("readdirp");
 const rimraf = require("rimraf");
 const progress = require("cli-progress");
 const glob = require("glob");
+const { type } = require("os");
 
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
@@ -118,7 +119,8 @@ class Snippet {
 }
 // Repo is the class that maps repo configuration to local filepaths
 class Repo {
-  constructor(owner, repo, ref) {
+  constructor(type, owner, repo, ref) {
+    this.type = type;
     this.owner = owner;
     this.repo = repo;
     this.ref = ref;
@@ -231,16 +233,17 @@ class Sync {
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
-        if ("files" in origin) {
+        if ('files' in origin) {
+          const pattern = origin.files.pattern;
+          const filePaths = glob.sync(pattern).map((f) => ({
+            name: basename(f), directory: dirname(f),
+          }))
           repositories.push({
-            owner: "local",
-            repo: "local",
-            filePaths: origin.files.flatMap((pattern) =>
-              glob.sync(pattern).map((f) => ({
-                name: basename(f),
-                directory: dirname(f),
-              }))
-            ),
+            type: 'local',
+            owner: origin.files.owner,
+            repo: origin.files.repo,
+            ref: origin.files.ref,
+            filePaths:  filePaths,
           });
           return;
         }
@@ -248,7 +251,7 @@ class Sync {
           throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
         }
         const { owner, repo, ref } = origin;
-        const repository = new Repo(owner, repo, ref);
+        const repository = new Repo('remote', owner, repo, ref);
         const byteArray = await this.getArchive(owner, repo, ref);
         const fileName = `${repo}.zip`;
         const buffer = arrayBuffToBuff(byteArray);
@@ -282,13 +285,13 @@ class Sync {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
-      repositories.map(async ({ owner, repo, ref, filePaths }) => {
+      repositories.map(async ({ type, owner, repo, ref, filePaths }) => {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
-          if (!(owner === "local" && repo === "local")) {
+          if (!(type === "local")) {
             itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
