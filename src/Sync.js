@@ -237,7 +237,7 @@ class Sync {
           const pattern = origin.files.pattern;
           const filePaths = glob.sync(pattern).map((f) => ({
             name: basename(f), directory: dirname(f),
-          }))
+          }));
           repositories.push({
             type: 'local',
             owner: origin.files.owner,
@@ -285,13 +285,13 @@ class Sync {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
-      repositories.map(async ({ type, owner, repo, ref, filePaths }) => {
+      repositories.map(async ({ RepoType, owner, repo, ref, filePaths }) => {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
-          if (!(type === "local")) {
+          if (!(RepoType === "local")) {
             itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
