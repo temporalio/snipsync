@@ -55,14 +55,11 @@ class Snippet {
       lines.push(textline);
     }
     if (config.select !== undefined) {
-      const selectedLines = selectLines(config.select, this.lines);
+      const selectedLines = selectLines(config.select, this.lines, this.ext);
       lines.push(...selectedLines);
-    }
-
-    // if there's no start/end pattern, there's nothing to parse.
-    if(!config.startPattern && !config.endPattern ) {
+    } else if(!config.startPattern && !config.endPattern ) {
       lines.push(...this.lines);
-    }else{
+    } else {
       // use the patterns to grab the content specified.
 
       const pattern = new RegExp(`(${config.startPattern}[\\s\\S]+${config.endPattern})`);
@@ -119,8 +116,8 @@ class Snippet {
 }
 // Repo is the class that maps repo configuration to local filepaths
 class Repo {
-  constructor(type, owner, repo, ref) {
-    this.type = type;
+  constructor(rtype, owner, repo, ref) {
+    this.rtype = rtype;
     this.owner = owner;
     this.repo = repo;
     this.ref = ref;
@@ -239,7 +236,7 @@ class Sync {
             name: basename(f), directory: dirname(f),
           }));
           repositories.push({
-            type: 'local',
+            rtype: 'local',
             owner: origin.files.owner,
             repo: origin.files.repo,
             ref: origin.files.ref,
@@ -554,6 +551,7 @@ function selectLines(selectNumbers, lines, fileExtension) {
       const num = parseInt(sn);
       nums = [num - 1, num];
     }
+
     if (nums[0] != 0) {
       newLines.push(`${ellipsisComment}`);
     }

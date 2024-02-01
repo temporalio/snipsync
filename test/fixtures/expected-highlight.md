@@ -1,7 +1,7 @@
 Text above snippet
 
 <!--SNIPSTART money-transfer-project-template-go-workflow {"highlightedLines": ["1", "3"]}-->
-[workflow.go](https://github.com/temporalio/money-transfer-project-template-go/blob/master/workflow.go)
+[workflow.go](https://github.com/temporalio/money-transfer-project-template-go/blob/main/workflow.go)
 ```go {1,3}
 func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 
