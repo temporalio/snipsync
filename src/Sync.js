@@ -228,13 +228,15 @@ class Sync {
     const repositories = [];
     this.progress.updateOperation("retrieving source files");
     this.progress.updateTotal(this.origins.length);
+    const rootD = this.config.root_dir
     await Promise.all(
       this.origins.map(async (origin) => {
         if ('files' in origin) {
           const pattern = origin.files.pattern;
-          const filePaths = glob.sync(pattern).map((f) => ({
-            name: basename(f), directory: dirname(f),
+          const filePaths = glob.sync(pattern, { cwd: rootD }).map((f) => ({
+            name: basename(f), directory: dirname(join(rootD, f)),
           }));
+          console.log(filePaths);
           repositories.push({
             rtype: 'local',
             owner: origin.files.owner,
