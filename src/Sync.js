@@ -228,15 +228,13 @@ class Sync {
     const repositories = [];
     this.progress.updateOperation("retrieving source files");
     this.progress.updateTotal(this.origins.length);
-    const rootD = this.config.root_dir
     await Promise.all(
       this.origins.map(async (origin) => {
         if ('files' in origin) {
           const pattern = origin.files.pattern;
-          const filePaths = glob.sync(pattern, { cwd: rootD }).map((f) => ({
-            name: basename(f), directory: dirname(join(rootD, f)),
+          const filePaths = glob.sync(pattern).map((f) => ({
+            name: basename(f), directory: dirname(f),
           }));
-          console.log(filePaths);
           repositories.push({
             rtype: 'local',
             owner: origin.files.owner,
@@ -284,13 +282,13 @@ class Sync {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
-      repositories.map(async ({ RepoType, owner, repo, ref, filePaths }) => {
+      repositories.map(async ({ rtype, owner, repo, ref, filePaths }) => {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
-          if (!(RepoType === "local")) {
+          if (rtype == "remote") {
             itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;

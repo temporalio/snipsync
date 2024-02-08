@@ -1,7 +1,7 @@
 Text above snippet
 
 <!--SNIPSTART test-local-files-workflow-->
-[money_transfer_workflow.go](https://github.com/temporalio/snipsync/blob/main/money_transfer_workflow.go)
+[test/fixtures/money_transfer_workflow.go](https://github.com/temporalio/snipsync/blob/main/test/fixtures/money_transfer_workflow.go)
 ```go
 func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 

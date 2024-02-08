@@ -241,24 +241,20 @@ test('Per snippet highlightedLines configuration', async() => {
 });
 
 test('Local file ingestion', async() => {
-
   cfg.origins = [
-      {
-        files: {
-          pattern: "./test/fixtures/*.go",
-          owner: "temporal",
-          repo: "snipsync",
-          ref: "main",
-        }
-      },
-    ],
-
+    {
+      files: {
+        pattern: "./test/fixtures/*.go",
+        owner: "temporalio",
+        repo: "snipsync",
+        ref: "main",
+      }
+    },
+  ],
   fs.copyFileSync(`${fixturesPath}/empty-test-local-files.md`,`${testEnvPath}/empty-test-local-files.md`);
-
   const synctron = new Sync(cfg, logger);
   await synctron.run();
   const data = fs.readFileSync(`${testEnvPath}/empty-test-local-files.md`, 'utf8');
   const expected = fs.readFileSync(`test/fixtures/expected-test-local-files.md`, 'utf8');
   expect(data).toMatch(expected);
-
 });

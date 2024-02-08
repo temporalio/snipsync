@@ -24,8 +24,12 @@ This file specifies the following:
 
 The `origins` property is a list of objects that have one of the following 2 formats:
 
-1. `owner`, `repo`, and optionally `ref`: pull snippets from a GitHub repo
-2. `files`: array of strings containing relative paths to load snippets from. Supports [glob](https://www.npmjs.com/package/glob) syntax.
+1. `owner`, `repo`, and optionally `ref`: Pull snippets from a GitHub repo
+2. `files`: a set of strings:
+  - `pattern`: Relative path to load snippets from. Supports [glob](https://www.npmjs.com/package/glob) syntax.
+  - `owner`: GitHub repo owner name, to be used in the source snippets links
+  - `repo`: Name of the repo snipsync is being used in, to link to the source snippets
+  - `ref`: (Optional, defaults to main) Used for writing source snippet links.
 
 If the `ref` key is left blank or not specified, then the most recent commit from the main branch will be used.
 If the `enable_source_link` key in `features` is not specified, then it will default to `true`.
@@ -46,7 +50,10 @@ origins:
   - owner: temporalio
     repo: java-samples
   - files:
-    - ./src/**/*.ts
+      pattern: ./sample-apps/typescript/*.ts
+      owner: temporalio
+      repo: documentation
+      ref: main
 
 targets:
   - docs
@@ -159,6 +166,14 @@ yarn snipsync --clear
 
 ## Development
 
-The snipsync tool is set up to test its own functionality during development.
-Git ignores the snipsync.config.yaml file and the 'docs' directory within the package itself.
-Run `yarn dev` to run snipsync from within the package.
+The snipsync tool is set up to run its own functionality during development.
+Git ignores the `snipsync.config.yaml` file and the `/docs` directory within the package itself.
+
+While developing, you can add files to `/docs` define the `snipsync.config.yaml` file, and 
+run `yarn dev` to run snipsync from the root of the repo.
+
+To clear the snippets run `yarn dev --clear`
+
+### Testing
+
+Run `yarn test` from the root of the repo to run the testing suites.
