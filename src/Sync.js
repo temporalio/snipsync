@@ -23,6 +23,7 @@ const readdirp = require("readdirp");
 const rimraf = require("rimraf");
 const progress = require("cli-progress");
 const glob = require("glob");
+const { type } = require("os");
 
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
@@ -54,14 +55,11 @@ class Snippet {
       lines.push(textline);
     }
     if (config.select !== undefined) {
-      const selectedLines = selectLines(config.select, this.lines);
+      const selectedLines = selectLines(config.select, this.lines, this.ext);
       lines.push(...selectedLines);
-    }
-
-    // if there's no start/end pattern, there's nothing to parse.
-    if(!config.startPattern && !config.endPattern ) {
+    } else if(!config.startPattern && !config.endPattern ) {
       lines.push(...this.lines);
-    }else{
+    } else {
       // use the patterns to grab the content specified.
 
       const pattern = new RegExp(`(${config.startPattern}[\\s\\S]+${config.endPattern})`);
@@ -118,7 +116,8 @@ class Snippet {
 }
 // Repo is the class that maps repo configuration to local filepaths
 class Repo {
-  constructor(owner, repo, ref) {
+  constructor(rtype, owner, repo, ref) {
+    this.rtype = rtype;
     this.owner = owner;
     this.repo = repo;
     this.ref = ref;
@@ -231,16 +230,17 @@ class Sync {
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
-        if ("files" in origin) {
+        if ('files' in origin) {
+          const pattern = origin.files.pattern;
+          const filePaths = glob.sync(pattern).map((f) => ({
+            name: basename(f), directory: dirname(f),
+          }));
           repositories.push({
-            owner: "local",
-            repo: "local",
-            filePaths: origin.files.flatMap((pattern) =>
-              glob.sync(pattern).map((f) => ({
-                name: basename(f),
-                directory: dirname(f),
-              }))
-            ),
+            rtype: 'local',
+            owner: origin.files.owner,
+            repo: origin.files.repo,
+            ref: origin.files.ref,
+            filePaths:  filePaths,
           });
           return;
         }
@@ -248,7 +248,7 @@ class Sync {
           throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
         }
         const { owner, repo, ref } = origin;
-        const repository = new Repo(owner, repo, ref);
+        const repository = new Repo('remote', owner, repo, ref);
         const byteArray = await this.getArchive(owner, repo, ref);
         const fileName = `${repo}.zip`;
         const buffer = arrayBuffToBuff(byteArray);
@@ -282,13 +282,13 @@ class Sync {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
-      repositories.map(async ({ owner, repo, ref, filePaths }) => {
+      repositories.map(async ({ rtype, owner, repo, ref, filePaths }) => {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
-          if (!(owner === "local" && repo === "local")) {
+          if (rtype == "remote") {
             itemPath = join(extractRootPath, itemPath);
           }
           let capture = false;
@@ -551,6 +551,7 @@ function selectLines(selectNumbers, lines, fileExtension) {
       const num = parseInt(sn);
       nums = [num - 1, num];
     }
+
     if (nums[0] != 0) {
       newLines.push(`${ellipsisComment}`);
     }

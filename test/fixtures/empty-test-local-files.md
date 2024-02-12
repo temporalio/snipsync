@@ -1,8 +1,6 @@
 Text above snippet
 
-<!--SNIPSTART typescript-hello-activity-->
+<!--SNIPSTART test-local-files-workflow-->
 <!--SNIPEND-->
 
 Text below snippet
-
-

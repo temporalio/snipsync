@@ -1,8 +1,14 @@
-Text above snippet
+package app
 
-<!--SNIPSTART money-transfer-project-template-go-workflow {"highlightedLines": ["1", "3"]}-->
-[workflow.go](https://github.com/temporalio/money-transfer-project-template-go/blob/main/workflow.go)
-```go {1,3}
+import (
+	"fmt"
+	"time"
+
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
+)
+
+// @@@SNIPSTART test-local-files-workflow
 func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 
 	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
@@ -60,7 +66,4 @@ func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 	return result, nil
 }
 
-```
-<!--SNIPEND-->
-
-Text below snippet
+// @@@SNIPEND

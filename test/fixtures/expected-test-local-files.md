@@ -1,8 +1,8 @@
 Text above snippet
 
-<!--SNIPSTART money-transfer-project-template-go-workflow {"highlightedLines": ["1", "3"]}-->
-[workflow.go](https://github.com/temporalio/money-transfer-project-template-go/blob/main/workflow.go)
-```go {1,3}
+<!--SNIPSTART test-local-files-workflow-->
+[test/fixtures/money_transfer_workflow.go](https://github.com/temporalio/snipsync/blob/main/test/fixtures/money_transfer_workflow.go)
+```go
 func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 
 	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
