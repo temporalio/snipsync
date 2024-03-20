@@ -10,7 +10,7 @@ func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 		InitialInterval:        time.Second,
 		BackoffCoefficient:     2.0,
 		MaximumInterval:        100 * time.Second,
-		MaximumAttempts:        0, // unlimited retries
+		MaximumAttempts:        500, // 0 is unlimited retries
 		NonRetryableErrorTypes: []string{"InvalidAccountError", "InsufficientFundsError"},
 	}
 
