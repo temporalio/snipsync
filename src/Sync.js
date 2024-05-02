@@ -194,9 +194,9 @@ class Sync {
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
-    const { repositories } = await this.getRepos();
+    const { repositories, usedRepos } = await this.getRepos();
     // Search each origin file and scrape the snippets
-    const snippets = await this.extractSnippets(repositories);
+    const snippets = await this.extractSnippets(repositories, usedRepos);
     // Get the infos (name, path) of all the files in the target directories
     let targetFiles = await this.getTargetFilesInfos();
     // Add the lines of each file
@@ -283,8 +283,7 @@ class Sync {
     });
     return result.data;
   }
-  // extractSnippets returns an array of code snippets that are found in the repositories
-  async extractSnippets(repositories) {
+  async extractSnippets(repositories, usedRepos) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
@@ -292,7 +291,6 @@ class Sync {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
-
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
           if (rtype == "remote") {
@@ -315,10 +313,10 @@ class Sync {
               const snip = new Snippet(id, ext, owner, repo, ref, item);
               fileSnips.push(snip);
             }
-            if (fileSnips.length > 0) {
-              this.usedRepos.add(`${owner}/${repo}`);
-            }
           });
+          if (fileSnips.length > 0) {
+            usedRepos.add(`${owner}/${repo}`);
+          }
           snippets.push(...fileSnips);
           this.progress.increment();
         }
