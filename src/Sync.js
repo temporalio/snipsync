@@ -207,11 +207,13 @@ class Sync {
     // Overwrite the files to the target directories
     await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
-    this.reportUnusedRepos(usedRepos);
+
     await this.cleanUp();
     this.progress.updateOperation("done");
     this.progress.stop();
     this.logger.info("snipsync operation complete");
+    this.reportUnusedRepos(usedRepos);
+    console.log("done");
     return;
   }
   // clear is the method that will remove snippets from target merge files
