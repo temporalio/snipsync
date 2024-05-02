@@ -258,23 +258,32 @@ class Sync {
     );
     return repositories;
   }
-  
-  async unzip(filename) {
+  async unzip(filename, maxRetries = 3) {
     const zipPath = join(rootDir, filename);
     const unzipPath = join(rootDir, extractionDir);
-    try {
-      const { files } = await anzip(zipPath, { outputPath: unzipPath });
-      await unlinkAsync(zipPath);
-      return files;
-    } catch (error) {
-      if (error.message.includes("invalid central directory file header signature")) {
-        this.logger.error(`Failed to unzip file: ${filename}. The ZIP file appears to be corrupted or invalid.`);
-      } else if (error.message.includes("unexpected EOF")) {
-        this.logger.error(`Failed to unzip file: ${filename}. The ZIP file is incomplete or truncated.`);
-      } else {
-        this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+    let retries = 0;
+    while (retries < maxRetries) {
+      try {
+        const { files } = await anzip(zipPath, { outputPath: unzipPath });
+        await unlinkAsync(zipPath);
+        return files;
+      } catch (error) {
+        if (error.message.includes("unexpected EOF")) {
+          retries++;
+          if (retries === maxRetries) {
+            this.logger.error(`Failed to unzip file: ${filename} after ${maxRetries} attempts. The ZIP file appears to be incomplete or truncated.`);
+            this.logger.error(`Error details: ${error.stack}`);
+            throw error;
+          } else {
+            this.logger.warn(`Failed to unzip file: ${filename}. The ZIP file appears to be incomplete or truncated. Retrying (attempt ${retries} of ${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Delay before retrying
+          }
+        } else {
+          this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+          this.logger.error(`Error details: ${error.stack}`);
+          throw error;
+        }
       }
-      throw error;
     }
   }
   
