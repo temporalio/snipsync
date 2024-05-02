@@ -227,7 +227,10 @@ class Sync {
   }
   // getRepos is the method that downloads all of the Github repos
   async getRepos() {
-    const repositories = [];
+    const reposData = {
+      repositories: [],
+      usedRepos: new Set(),
+    };
     this.progress.updateOperation("retrieving source files");
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
@@ -237,13 +240,14 @@ class Sync {
           const filePaths = glob.sync(pattern).map((f) => ({
             name: basename(f), directory: dirname(f),
           }));
-          repositories.push({
+          reposData.repositories.push({
             rtype: 'local',
             owner: origin.files.owner,
             repo: origin.files.repo,
             ref: origin.files.ref,
             filePaths:  filePaths,
           });
+          reposData.usedRepos.add(`${origin.files.owner}/${origin.files.repo}`);
           return;
         }
         if (!("owner" in origin && "repo" in origin)) {
@@ -256,11 +260,12 @@ class Sync {
         const buffer = arrayBuffToBuff(byteArray);
         await writeAsync(fileName, buffer);
         repository.filePaths = await this.unzip(fileName);
-        repositories.push(repository);
+        reposData.repositories.push(repository);
+        reposData.usedRepos.add(`${owner}/${repo}`);
         this.progress.increment();
       })
     );
-    return repositories;
+    return reposData;
   }
   // unzip unzips the Github repo archive
   async unzip(filename) {
