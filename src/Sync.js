@@ -40,6 +40,7 @@ class Snippet {
     this.ref = ref;
     this.filePath = filePath;
     this.lines = [];
+    this.usedRepos = new Set();
   }
   // fmt creates an array of file lines from the Snippet variables
   fmt(config) {
@@ -210,6 +211,7 @@ class Sync {
     this.progress.updateOperation("done");
     this.progress.stop();
     this.logger.info("snipsync operation complete");
+    this.reportUnusedRepos();
     return;
   }
   // clear is the method that will remove snippets from target merge files
@@ -286,6 +288,9 @@ class Sync {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
+          if (fileSnips.length > 0) {
+            this.usedRepos.add(`${owner}/${repo}`);
+          }
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
           if (rtype == "remote") {
@@ -448,6 +453,20 @@ class Sync {
       this.progress.increment();
     }
     return;
+  }
+  reportUnusedRepos() {
+    const configRepos = new Set(
+      this.origins.map((origin) => `${origin.owner}/${origin.repo}`)
+    );
+    const unusedRepos = new Set(
+      [...configRepos].filter((repo) => !this.usedRepos.has(repo))
+    );
+    if (unusedRepos.size > 0) {
+      this.logger.warn("Unused repositories:");
+      for (const repo of unusedRepos) {
+        this.logger.warn(`- ${repo}`);
+      }
+    }
   }
   // cleanUp deletes temporary files and folders
   async cleanUp() {
