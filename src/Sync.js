@@ -245,39 +245,53 @@ class Sync {
           return;
         }
         if (!("owner" in origin && "repo" in origin)) {
-          throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
+          throw new Error(`Invalid origin: ${JSON.stringify(origin)}. Missing "owner" or "repo" property.`);
         }
         const { owner, repo, ref } = origin;
         const repository = new Repo('remote', owner, repo, ref);
-        const byteArray = await this.getArchive(owner, repo, ref);
-        const fileName = `${repo}.zip`;
-        const buffer = arrayBuffToBuff(byteArray);
-        await writeAsync(fileName, buffer);
-        repository.filePaths = await this.unzip(fileName);
-        repositories.push(repository);
-        this.progress.increment();
+        try {
+          const byteArray = await this.getArchive(owner, repo, ref);
+          const fileName = `${repo}.zip`;
+          const buffer = arrayBuffToBuff(byteArray);
+          await writeAsync(fileName, buffer);
+          repository.filePaths = await this.unzip(fileName);
+          repositories.push(repository);
+          this.progress.increment();
+        } catch (error) {
+          this.logger.error(`Failed to retrieve repository: ${owner}/${repo}. Error: ${error.message}`);
+        }
       })
     );
     return repositories;
   }
-  // unzip unzips the Github repo archive
+  
   async unzip(filename) {
     const zipPath = join(rootDir, filename);
     const unzipPath = join(rootDir, extractionDir);
-    const { files } = await anzip(zipPath, { outputPath: unzipPath });
-    await unlinkAsync(zipPath);
-    return files;
+    try {
+      const { files } = await anzip(zipPath, { outputPath: unzipPath });
+      await unlinkAsync(zipPath);
+      return files;
+    } catch (error) {
+      this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+      throw error;
+    }
   }
-  // getArchive gets the Github repo archive from Github
+  
   async getArchive(owner, repo, ref) {
-    const result = await this.github.repos.downloadZipballArchive({
-      owner,
-      repo,
-      ref,
-    });
-    return result.data;
+    try {
+      const result = await this.github.repos.downloadZipballArchive({
+        owner,
+        repo,
+        ref,
+      });
+      return result.data;
+    } catch (error) {
+      this.logger.error(`Failed to download archive for repository: ${owner}/${repo}. Error: ${error.message}`);
+      throw error;
+    }
   }
-  // extractSnippets returns an array of code snippets that are found in the repositories
+  
   async extractSnippets(repositories) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
@@ -294,23 +308,27 @@ class Sync {
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
-          await eachLineAsync(itemPath, (line) => {
-            if (line.includes(readEnd)) {
-              capture = false;
-              fileSnipsCount++;
-            }
-            if (capture) {
-              fileSnips[fileSnipsCount].lines.push(line);
-            }
-            if (line.includes(readStart)) {
-              capture = true;
-              const id = extractReadID(line);
-              const snip = new Snippet(id, ext, owner, repo, ref, item);
-              fileSnips.push(snip);
-            }
-          });
-          snippets.push(...fileSnips);
-          this.progress.increment();
+          try {
+            await eachLineAsync(itemPath, (line) => {
+              if (line.includes(readEnd)) {
+                capture = false;
+                fileSnipsCount++;
+              }
+              if (capture) {
+                fileSnips[fileSnipsCount].lines.push(line);
+              }
+              if (line.includes(readStart)) {
+                capture = true;
+                const id = extractReadID(line);
+                const snip = new Snippet(id, ext, owner, repo, ref, item);
+                fileSnips.push(snip);
+              }
+            });
+            snippets.push(...fileSnips);
+            this.progress.increment();
+          } catch (error) {
+            this.logger.error(`Failed to extract snippets from file: ${itemPath}. Error: ${error.message}`);
+          }
         }
       })
     );
