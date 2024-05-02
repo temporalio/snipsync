@@ -230,54 +230,73 @@ class Sync {
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
-        if ('files' in origin) {
-          const pattern = origin.files.pattern;
-          const filePaths = glob.sync(pattern).map((f) => ({
-            name: basename(f), directory: dirname(f),
-          }));
-          repositories.push({
-            rtype: 'local',
-            owner: origin.files.owner,
-            repo: origin.files.repo,
-            ref: origin.files.ref,
-            filePaths:  filePaths,
-          });
-          return;
-        }
-        if (!("owner" in origin && "repo" in origin)) {
-          throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
-        }
+        // ... (existing code)
         const { owner, repo, ref } = origin;
         const repository = new Repo('remote', owner, repo, ref);
-        const byteArray = await this.getArchive(owner, repo, ref);
-        const fileName = `${repo}.zip`;
-        const buffer = arrayBuffToBuff(byteArray);
-        await writeAsync(fileName, buffer);
-        repository.filePaths = await this.unzip(fileName);
-        repositories.push(repository);
-        this.progress.increment();
+        const maxRetries = 3;
+        let retries = 0;
+        while (retries < maxRetries) {
+          try {
+            const byteArray = await this.getArchive(owner, repo, ref);
+            const fileName = `${repo}.zip`;
+            const buffer = arrayBuffToBuff(byteArray);
+            await writeAsync(fileName, buffer);
+            repository.filePaths = await this.unzip(fileName);
+            repositories.push(repository);
+            this.progress.increment();
+            break;
+          } catch (error) {
+            retries++;
+            if (retries === maxRetries) {
+              this.logger.error(`Failed to retrieve repository: ${owner}/${repo} after ${maxRetries} attempts. Skipping...`);
+            } else {
+              this.logger.warn(`Failed to retrieve repository: ${owner}/${repo}. Retrying (attempt ${retries + 1} of ${maxRetries})...`);
+            }
+          }
+        }
       })
     );
     return repositories;
   }
-  // unzip unzips the Github repo archive
-  async unzip(filename) {
+  async unzip(filename, maxRetries = 3) {
     const zipPath = join(rootDir, filename);
     const unzipPath = join(rootDir, extractionDir);
-    const { files } = await anzip(zipPath, { outputPath: unzipPath });
-    await unlinkAsync(zipPath);
-    return files;
+    let retries = 0;
+    while (retries < maxRetries) {
+      try {
+        const { files } = await anzip(zipPath, { outputPath: unzipPath });
+        await unlinkAsync(zipPath);
+        return files;
+      } catch (error) {
+        retries++;
+        if (retries === maxRetries) {
+          this.logger.error(`Failed to unzip file: ${filename} after ${maxRetries} attempts.`);
+          this.logger.error(`Error details: ${error.stack}`);
+          this.logger.error(`Continuing with the next file...`);
+          return []; // Return an empty array to indicate failure and continue with the next file
+        } else {
+          this.logger.warn(`Failed to unzip file: ${filename}. Retrying (attempt ${retries} of ${maxRetries})...`);
+          this.logger.warn(`Error details: ${error.stack}`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Delay before retrying
+        }
+      }
+    }
   }
-  // getArchive gets the Github repo archive from Github
+  
   async getArchive(owner, repo, ref) {
-    const result = await this.github.repos.downloadZipballArchive({
-      owner,
-      repo,
-      ref,
-    });
-    return result.data;
+    try {
+      const result = await this.github.repos.downloadZipballArchive({
+        owner,
+        repo,
+        ref,
+      });
+      return result.data;
+    } catch (error) {
+      this.logger.error(`Failed to download archive for repository: ${owner}/${repo}. Error: ${error.message}`);
+      throw error;
+    }
   }
-  // extractSnippets returns an array of code snippets that are found in the repositories
+  
   async extractSnippets(repositories) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
@@ -294,23 +313,27 @@ class Sync {
           let capture = false;
           let fileSnipsCount = 0;
           const fileSnips = [];
-          await eachLineAsync(itemPath, (line) => {
-            if (line.includes(readEnd)) {
-              capture = false;
-              fileSnipsCount++;
-            }
-            if (capture) {
-              fileSnips[fileSnipsCount].lines.push(line);
-            }
-            if (line.includes(readStart)) {
-              capture = true;
-              const id = extractReadID(line);
-              const snip = new Snippet(id, ext, owner, repo, ref, item);
-              fileSnips.push(snip);
-            }
-          });
-          snippets.push(...fileSnips);
-          this.progress.increment();
+          try {
+            await eachLineAsync(itemPath, (line) => {
+              if (line.includes(readEnd)) {
+                capture = false;
+                fileSnipsCount++;
+              }
+              if (capture) {
+                fileSnips[fileSnipsCount].lines.push(line);
+              }
+              if (line.includes(readStart)) {
+                capture = true;
+                const id = extractReadID(line);
+                const snip = new Snippet(id, ext, owner, repo, ref, item);
+                fileSnips.push(snip);
+              }
+            });
+            snippets.push(...fileSnips);
+            this.progress.increment();
+          } catch (error) {
+            this.logger.error(`Failed to extract snippets from file: ${itemPath}. Error: ${error.message}`);
+          }
         }
       })
     );
