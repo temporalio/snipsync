@@ -122,6 +122,7 @@ class Repo {
     this.repo = repo;
     this.ref = ref;
     this.filePaths = [];
+    this.usedRepos = new Set();
   }
 }
 // File is the class that contains a filename and lines of the file
@@ -194,9 +195,9 @@ class Sync {
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
-    const repositories = await this.getRepos();
+    const { repositories, usedRepos } = await this.getRepos();
     // Search each origin file and scrape the snippets
-    const snippets = await this.extractSnippets(repositories);
+    const snippets = await this.extractSnippets(repositories, usedRepos);
     // Get the infos (name, path) of all the files in the target directories
     let targetFiles = await this.getTargetFilesInfos();
     // Add the lines of each file
@@ -206,10 +207,13 @@ class Sync {
     // Overwrite the files to the target directories
     await this.writeFiles(splicedFiles);
     // Delete the sync_repos directory
+
     await this.cleanUp();
     this.progress.updateOperation("done");
     this.progress.stop();
     this.logger.info("snipsync operation complete");
+    this.reportUnusedRepos(usedRepos);
+    console.log("done");
     return;
   }
   // clear is the method that will remove snippets from target merge files
@@ -225,7 +229,10 @@ class Sync {
   }
   // getRepos is the method that downloads all of the Github repos
   async getRepos() {
-    const repositories = [];
+    const reposData = {
+      repositories: [],
+      usedRepos: new Set(),
+    };
     this.progress.updateOperation("retrieving source files");
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
@@ -235,13 +242,14 @@ class Sync {
           const filePaths = glob.sync(pattern).map((f) => ({
             name: basename(f), directory: dirname(f),
           }));
-          repositories.push({
+          reposData.repositories.push({
             rtype: 'local',
             owner: origin.files.owner,
             repo: origin.files.repo,
             ref: origin.files.ref,
             filePaths:  filePaths,
           });
+          reposData.usedRepos.add(`${origin.files.owner}/${origin.files.repo}`);
           return;
         }
         if (!("owner" in origin && "repo" in origin)) {
@@ -254,11 +262,12 @@ class Sync {
         const buffer = arrayBuffToBuff(byteArray);
         await writeAsync(fileName, buffer);
         repository.filePaths = await this.unzip(fileName);
-        repositories.push(repository);
+        reposData.repositories.push(repository);
+        reposData.usedRepos.add(`${owner}/${repo}`);
         this.progress.increment();
       })
     );
-    return repositories;
+    return reposData;
   }
   // unzip unzips the Github repo archive
   async unzip(filename) {
@@ -277,8 +286,21 @@ class Sync {
     });
     return result.data;
   }
-  // extractSnippets returns an array of code snippets that are found in the repositories
-  async extractSnippets(repositories) {
+  reportUnusedRepos(usedRepos) {
+    const configRepos = new Set(
+      this.origins.map((origin) => `${origin.owner}/${origin.repo}`)
+    );
+    const unusedRepos = new Set(
+      [...configRepos].filter((repo) => !usedRepos.has(repo))
+    );
+    if (unusedRepos.size > 0) {
+      this.logger.warn("Unused repositories:");
+      for (const repo of unusedRepos) {
+        this.logger.warn(`- ${repo}`);
+      }
+    }
+  }
+  async extractSnippets(repositories, usedRepos) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
@@ -309,6 +331,9 @@ class Sync {
               fileSnips.push(snip);
             }
           });
+          if (fileSnips.length > 0) {
+            usedRepos.add(`${owner}/${repo}`);
+          }
           snippets.push(...fileSnips);
           this.progress.increment();
         }
@@ -316,6 +341,10 @@ class Sync {
     );
     return snippets;
   }
+  
+
+
+
   // getTargetFilesInfos identifies the paths to the target write files
   async getTargetFilesInfos() {
     this.progress.updateOperation("gathering information of target files");
