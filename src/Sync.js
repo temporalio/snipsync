@@ -40,7 +40,6 @@ class Snippet {
     this.ref = ref;
     this.filePath = filePath;
     this.lines = [];
-    this.usedRepos = new Set();
   }
   // fmt creates an array of file lines from the Snippet variables
   fmt(config) {
@@ -195,7 +194,7 @@ class Sync {
     // Download repo as zip file.
     // Extract to sync_repos directory.
     // Get repository details and file paths.
-    const repositories = await this.getRepos();
+    const { repositories } = await this.getRepos();
     // Search each origin file and scrape the snippets
     const snippets = await this.extractSnippets(repositories);
     // Get the infos (name, path) of all the files in the target directories
