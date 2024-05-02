@@ -268,20 +268,16 @@ class Sync {
         await unlinkAsync(zipPath);
         return files;
       } catch (error) {
-        if (error.message.includes("unexpected EOF")) {
-          retries++;
-          if (retries === maxRetries) {
-            this.logger.error(`Failed to unzip file: ${filename} after ${maxRetries} attempts. The ZIP file appears to be incomplete or truncated.`);
-            this.logger.error(`Error details: ${error.stack}`);
-            throw error;
-          } else {
-            this.logger.warn(`Failed to unzip file: ${filename}. The ZIP file appears to be incomplete or truncated. Retrying (attempt ${retries} of ${maxRetries})...`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Delay before retrying
-          }
-        } else {
-          this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+        retries++;
+        if (retries === maxRetries) {
+          this.logger.error(`Failed to unzip file: ${filename} after ${maxRetries} attempts.`);
           this.logger.error(`Error details: ${error.stack}`);
-          throw error;
+          this.logger.error(`Continuing with the next file...`);
+          return []; // Return an empty array to indicate failure and continue with the next file
+        } else {
+          this.logger.warn(`Failed to unzip file: ${filename}. Retrying (attempt ${retries} of ${maxRetries})...`);
+          this.logger.warn(`Error details: ${error.stack}`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Delay before retrying
         }
       }
     }
