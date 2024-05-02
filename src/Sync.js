@@ -284,7 +284,7 @@ class Sync {
     });
     return result.data;
   }
-  async reportUnusedRepos(usedRepos) {
+  reportUnusedRepos(usedRepos) {
     const configRepos = new Set(
       this.origins.map((origin) => `${origin.owner}/${origin.repo}`)
     );
@@ -298,7 +298,6 @@ class Sync {
       }
     }
   }
-  // extractSnippets returns an array of code snippets that are found in the repositories
   async extractSnippets(repositories, usedRepos) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
@@ -307,9 +306,6 @@ class Sync {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
-          if (fileSnips.length > 0) {
-            usedRepos.add(`${owner}/${repo}`);
-          }
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
           if (rtype == "remote") {
@@ -333,6 +329,9 @@ class Sync {
               fileSnips.push(snip);
             }
           });
+          if (fileSnips.length > 0) {
+            usedRepos.add(`${owner}/${repo}`);
+          }
           snippets.push(...fileSnips);
           this.progress.increment();
         }
@@ -340,20 +339,10 @@ class Sync {
     );
     return snippets;
   }
-  reportUnusedRepos(usedRepos) {
-  const configRepos = new Set(
-    this.origins.map((origin) => `${origin.owner}/${origin.repo}`)
-  );
-  const unusedRepos = new Set(
-    [...configRepos].filter((repo) => !usedRepos.has(repo))
-  );
-  if (unusedRepos.size > 0) {
-    this.logger.warn("Unused repositories:");
-    for (const repo of unusedRepos) {
-      this.logger.warn(`- ${repo}`);
-    }
-  }
-}
+  
+
+
+
   // getTargetFilesInfos identifies the paths to the target write files
   async getTargetFilesInfos() {
     this.progress.updateOperation("gathering information of target files");
