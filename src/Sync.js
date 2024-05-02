@@ -230,35 +230,29 @@ class Sync {
     this.progress.updateTotal(this.origins.length);
     await Promise.all(
       this.origins.map(async (origin) => {
-        if ('files' in origin) {
-          const pattern = origin.files.pattern;
-          const filePaths = glob.sync(pattern).map((f) => ({
-            name: basename(f), directory: dirname(f),
-          }));
-          repositories.push({
-            rtype: 'local',
-            owner: origin.files.owner,
-            repo: origin.files.repo,
-            ref: origin.files.ref,
-            filePaths:  filePaths,
-          });
-          return;
-        }
-        if (!("owner" in origin && "repo" in origin)) {
-          throw new Error(`Invalid origin: ${JSON.stringify(origin)}. Missing "owner" or "repo" property.`);
-        }
+        // ... (existing code)
         const { owner, repo, ref } = origin;
         const repository = new Repo('remote', owner, repo, ref);
-        try {
-          const byteArray = await this.getArchive(owner, repo, ref);
-          const fileName = `${repo}.zip`;
-          const buffer = arrayBuffToBuff(byteArray);
-          await writeAsync(fileName, buffer);
-          repository.filePaths = await this.unzip(fileName);
-          repositories.push(repository);
-          this.progress.increment();
-        } catch (error) {
-          this.logger.error(`Failed to retrieve repository: ${owner}/${repo}. Error: ${error.message}`);
+        const maxRetries = 3;
+        let retries = 0;
+        while (retries < maxRetries) {
+          try {
+            const byteArray = await this.getArchive(owner, repo, ref);
+            const fileName = `${repo}.zip`;
+            const buffer = arrayBuffToBuff(byteArray);
+            await writeAsync(fileName, buffer);
+            repository.filePaths = await this.unzip(fileName);
+            repositories.push(repository);
+            this.progress.increment();
+            break;
+          } catch (error) {
+            retries++;
+            if (retries === maxRetries) {
+              this.logger.error(`Failed to retrieve repository: ${owner}/${repo} after ${maxRetries} attempts. Skipping...`);
+            } else {
+              this.logger.warn(`Failed to retrieve repository: ${owner}/${repo}. Retrying (attempt ${retries + 1} of ${maxRetries})...`);
+            }
+          }
         }
       })
     );
@@ -273,7 +267,13 @@ class Sync {
       await unlinkAsync(zipPath);
       return files;
     } catch (error) {
-      this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+      if (error.message.includes("invalid central directory file header signature")) {
+        this.logger.error(`Failed to unzip file: ${filename}. The ZIP file appears to be corrupted or invalid.`);
+      } else if (error.message.includes("unexpected EOF")) {
+        this.logger.error(`Failed to unzip file: ${filename}. The ZIP file is incomplete or truncated.`);
+      } else {
+        this.logger.error(`Failed to unzip file: ${filename}. Error: ${error.message}`);
+      }
       throw error;
     }
   }
