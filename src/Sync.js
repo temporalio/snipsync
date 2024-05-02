@@ -288,9 +288,7 @@ class Sync {
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
-          if (fileSnips.length > 0) {
-            this.usedRepos.add(`${owner}/${repo}`);
-          }
+
           const ext = determineExtension(item.name);
           let itemPath = join(item.directory, item.name);
           if (rtype == "remote") {
@@ -312,6 +310,9 @@ class Sync {
               const id = extractReadID(line);
               const snip = new Snippet(id, ext, owner, repo, ref, item);
               fileSnips.push(snip);
+            }
+            if (fileSnips.length > 0) {
+              this.usedRepos.add(`${owner}/${repo}`);
             }
           });
           snippets.push(...fileSnips);
