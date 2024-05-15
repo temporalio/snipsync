@@ -249,13 +249,20 @@ class Sync {
         }
         const { owner, repo, ref } = origin;
         const repository = new Repo('remote', owner, repo, ref);
-        const byteArray = await this.getArchive(owner, repo, ref);
-        const fileName = `${repo}.zip`;
-        const buffer = arrayBuffToBuff(byteArray);
-        await writeAsync(fileName, buffer);
-        repository.filePaths = await this.unzip(fileName);
-        repositories.push(repository);
-        this.progress.increment();
+        try {
+          await retryWithExponentialBackoff(async () => {
+            const byteArray = await this.getArchive(owner, repo, ref);
+            const fileName = `${repo}.zip`;
+            const buffer = arrayBuffToBuff(byteArray);
+            await writeAsync(fileName, buffer);
+            repository.filePaths = await this.unzip(fileName);
+            repositories.push(repository);
+            this.progress.increment();
+          }, 5, 1000);
+        } catch (e) {
+          console.error(`\n\nFailed downloading ${owner}/${repo}/${ref}`);
+          process.exit(1);
+        }
       })
     );
     return repositories;
@@ -559,6 +566,26 @@ function selectLines(selectNumbers, lines, fileExtension) {
     newLines.push(...capture);
   }
   return newLines;
+}
+
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function retryWithExponentialBackoff(fn, retries = 5, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i < retries - 1) {
+        const waitTime = delay * Math.pow(2, i); // Exponential backoff
+        console.log(` - Operation failed - Retrying in ${waitTime} ms...`);
+        await sleep(waitTime);
+      } else {
+        throw e;
+      }
+    }
+  }
 }
 
 module.exports = { Sync };
