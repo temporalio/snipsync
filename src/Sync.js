@@ -60,20 +60,17 @@ class Snippet {
     if (config.select !== undefined) {
       const selectedLines = selectLines(config.select, this.lines, this.ext);
       lines.push(...selectedLines);
-    } else if(!config.startPattern && !config.endPattern ) {
+    } else if (!config.startPattern && !config.endPattern) {
       lines.push(...this.lines);
     } else {
       // use the patterns to grab the content specified.
-
       const pattern = new RegExp(`(${config.startPattern}[\\s\\S]+${config.endPattern})`);
       const match = this.lines.join("\n").match(pattern);
-
       if (match !== null) {
         let filteredLines = match[1].split("\n");
         lines.push(...filteredLines);
       }
     }
-
     if (config.enable_code_block) {
       lines.push(markdownCodeTicks);
     }
@@ -142,11 +139,9 @@ class File {
   // fileString converts the array of lines into a string
   fileString(dedentCode = false) {
     let lines = `${this.lines.join("\n")}\n`;
-
     if (dedentCode) {
       lines = dedent(lines);
     }
-
     return lines;
   }
 }
@@ -563,6 +558,17 @@ function selectLines(select, lines) {
   });
   return selectedLines;
 }
+
+// See: https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+function escapeStringRegexp(string) {
+  return string.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
+}
+
+const writeMatchRegexp = new RegExp(
+  escapeStringRegexp(writeStart) +
+    /\s+(\S+)(?:\s+(.+))?\s*/.source +
+    escapeStringRegexp(writeStartClose)
+);
 
 // extractWriteIDAndConfig uses regex to extract the id from a string
 function extractWriteIDAndConfig(line) {
