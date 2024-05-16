@@ -461,6 +461,7 @@ class Sync {
     }
     return dynamicFile;
   }
+  
 
   // spliceFile merges an individual snippet into the file
   async spliceFile(start, end, snippet, file, config) {
@@ -554,6 +555,9 @@ function extractReadID(line) {
 // extractWriteIDAndConfig uses regex to extract the id from a string
 function extractWriteIDAndConfig(line) {
   const matches = line.match(writeMatchRegexp);
+  if (!matches) {
+    return { id: null, config: {} };
+  }
   let id = matches[1];
   let config = {};
   try {
@@ -562,9 +566,9 @@ function extractWriteIDAndConfig(line) {
     console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
     config = undefined;
   }
-
   return { id, config };
 }
+
 
 // overwriteConfig uses values if provided in the snippet placeholder
 function overwriteConfig(current, extracted) {
