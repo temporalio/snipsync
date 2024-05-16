@@ -4,3 +4,6 @@ Text above snippet
 <!--SNIPEND-->
 
 Text below snippet
+
+<!--SNIPSTART money-transfer-project-template-go-workflow-->
+<!--SNIPEND-->

@@ -13,6 +13,8 @@ const {
   writeStart,
   writeStartClose,
   writeEnd,
+  snipFileStart,
+  snipFileEnd,
 } = require("./common");
 const { writeFile, unlink } = require("fs");
 const dedent = require("dedent");
@@ -23,13 +25,13 @@ const readdirp = require("readdirp");
 const rimraf = require("rimraf");
 const progress = require("cli-progress");
 const glob = require("glob");
-const { type } = require("os");
 
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
+
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
   constructor(id, ext, owner, repo, ref, filePath) {
@@ -41,6 +43,7 @@ class Snippet {
     this.filePath = filePath;
     this.lines = [];
   }
+
   // fmt creates an array of file lines from the Snippet variables
   fmt(config) {
     const lines = [];
@@ -84,6 +87,7 @@ class Snippet {
     const link = `[${buildPath}](${url})`;
     return link;
   }
+
   // buildPath creates a string that represents the relative path to the snippet
   buildPath() {
     const sourceURLParts = this.filePath.directory.split("/");
@@ -93,6 +97,7 @@ class Snippet {
     ].join("/");
     return buildPath;
   }
+
   // buildURL creates a url to the snippet source location
   buildURL() {
     const sourceURLParts = this.filePath.directory.split("/");
@@ -114,6 +119,7 @@ class Snippet {
     return url;
   }
 }
+
 // Repo is the class that maps repo configuration to local filepaths
 class Repo {
   constructor(rtype, owner, repo, ref) {
@@ -124,6 +130,7 @@ class Repo {
     this.filePaths = [];
   }
 }
+
 // File is the class that contains a filename and lines of the file
 class File {
   constructor(filename, fullpath) {
@@ -131,6 +138,7 @@ class File {
     this.fullpath = fullpath;
     this.lines = [];
   }
+
   // fileString converts the array of lines into a string
   fileString(dedentCode = false) {
     let lines = `${this.lines.join("\n")}\n`;
@@ -142,6 +150,7 @@ class File {
     return lines;
   }
 }
+
 class ProgressBar {
   constructor() {
     this.bar = new progress.Bar(
@@ -153,30 +162,36 @@ class ProgressBar {
     this.startValue = 0;
     this.totalValue = 0;
   }
+
   // start sets the initial text display
   start(operation) {
     this.bar.start(this.totalValue, this.startValue, {
       operation: `${operation}`,
     });
   }
+
   // adds to the total chunks
   updateTotal(valueAdd) {
     this.totalValue = this.totalValue + valueAdd;
     this.bar.setTotal(this.totalValue);
   }
+
   // increments completed chunks by 1
   increment() {
     this.bar.increment();
   }
+
   // updates the text display
   updateOperation(operation) {
     this.bar.update({ operation: `${operation}` });
   }
+
   // stops the progress bar
   stop() {
     this.bar.stop();
   }
 }
+
 // Sync is the class of methods that can be used to do the following:
 // Download repos, extract code snippets, merge snippets, and clear snippets from target files
 class Sync {
@@ -188,6 +203,7 @@ class Sync {
     this.github = octokit;
     this.progress = new ProgressBar();
   }
+
   // run is the main method of the Sync class that downloads, extracts, and merges snippets
   async run() {
     this.progress.start("starting snipsync operations");
@@ -212,6 +228,7 @@ class Sync {
     this.logger.info("snipsync operation complete");
     return;
   }
+
   // clear is the method that will remove snippets from target merge files
   async clear() {
     this.progress.start("clearing snippets from files");
@@ -223,6 +240,7 @@ class Sync {
     this.progress.stop();
     this.logger.info("snippets have been cleared.");
   }
+
   // getRepos is the method that downloads all of the Github repos
   async getRepos() {
     const repositories = [];
@@ -244,6 +262,23 @@ class Sync {
           });
           return;
         }
+        if ('file' in origin) {
+          const { owner, repo, ref, filePath } = origin.file;
+          const byteArray = await this.getFileContent(owner, repo, ref, filePath);
+          const content = arrayBuffToBuff(byteArray).toString();
+          const fileLines = content.split('\n');
+          const snippet = new Snippet('', path.extname(filePath).substring(1), owner, repo, ref, {
+            directory: dirname(filePath),
+            name: basename(filePath),
+          });
+          snippet.lines = fileLines;
+          repositories.push({
+            rtype: 'file',
+            snippets: [snippet],
+          });
+          this.progress.increment();
+          return;
+        }
         if (!("owner" in origin && "repo" in origin)) {
           throw new Error(`Invalid origin: ${JSON.stringify(origin)}`);
         }
@@ -260,6 +295,7 @@ class Sync {
     );
     return repositories;
   }
+
   // unzip unzips the Github repo archive
   async unzip(filename) {
     const zipPath = join(rootDir, filename);
@@ -268,6 +304,7 @@ class Sync {
     await unlinkAsync(zipPath);
     return files;
   }
+
   // getArchive gets the Github repo archive from Github
   async getArchive(owner, repo, ref) {
     const result = await this.github.repos.downloadZipballArchive({
@@ -277,12 +314,29 @@ class Sync {
     });
     return result.data;
   }
+
+  // getFileContent gets the content of a single file from Github
+  async getFileContent(owner, repo, ref, filePath) {
+    const result = await this.github.repos.getContent({
+      owner,
+      repo,
+      path: filePath,
+      ref,
+    });
+    const content = Buffer.from(result.data.content, 'base64');
+    return content;
+  }
+
   // extractSnippets returns an array of code snippets that are found in the repositories
   async extractSnippets(repositories) {
     const snippets = [];
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
-      repositories.map(async ({ rtype, owner, repo, ref, filePaths }) => {
+      repositories.map(async ({ rtype, owner, repo, ref, filePaths, snippets: repoSnippets }) => {
+        if (rtype === 'file') {
+          snippets.push(...repoSnippets);
+          return;
+        }
         this.progress.updateTotal(filePaths.length);
         const extractRootPath = join(rootDir, extractionDir);
         for (const item of filePaths) {
@@ -316,6 +370,7 @@ class Sync {
     );
     return snippets;
   }
+
   // getTargetFilesInfos identifies the paths to the target write files
   async getTargetFilesInfos() {
     this.progress.updateOperation("gathering information of target files");
@@ -338,6 +393,7 @@ class Sync {
     }
     return targetFiles;
   }
+
   // getTargetFilesLines loops through the files and calls readLines on each one
   async getTargetFilesLines(targetFiles) {
     this.progress.updateOperation("reading target files");
@@ -349,6 +405,7 @@ class Sync {
     }
     return updatedFiles;
   }
+
   // readLines reads each line of the file
   async readLines(targetFile) {
     const fileLines = [];
@@ -358,6 +415,7 @@ class Sync {
     targetFile.lines = fileLines;
     return targetFile;
   }
+
   // spliceSnippets merges the snippet into the target location of a file
   async spliceSnippets(snippets, files) {
     this.progress.updateOperation("splicing snippets with targets");
@@ -370,7 +428,8 @@ class Sync {
     }
     return files;
   }
-  // getSplicedFile returns the the spliced file
+
+  // getSplicedFile returns the spliced file
   async getSplicedFile(snippet, file) {
     const staticFile = file;
     let dynamicFile = file;
@@ -380,15 +439,15 @@ class Sync {
     let config;
     for (let [idx, _] of staticFile.lines.entries()) {
       const line = file.lines[idx];
-      if (line.includes(writeStart)) {
+      if (line.includes(writeStart) || line.includes(snipFileStart)) {
         const extracted = extractWriteIDAndConfig(line);
-        if (extracted.id === snippet.id) {
+        if (extracted.id === snippet.id || line.includes(snipFileStart)) {
           config = overwriteConfig(this.config.features, extracted.config);
           spliceStart = fileLineNumber;
           lookForStop = true;
         }
       }
-      if (line.includes(writeEnd) && lookForStop) {
+      if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
         dynamicFile = await this.spliceFile(
           spliceStart,
           fileLineNumber,
@@ -402,12 +461,14 @@ class Sync {
     }
     return dynamicFile;
   }
+
   // spliceFile merges an individual snippet into the file
   async spliceFile(start, end, snippet, file, config) {
     const rmlines = end - start;
     file.lines.splice(start, rmlines - 1, ...snippet.fmt(config));
     return file;
   }
+
   // clearSnippets loops through target files to remove snippets
   async clearSnippets(files) {
     this.progress.updateOperation("removing splices");
@@ -418,24 +479,26 @@ class Sync {
     }
     return files;
   }
+
   // getClearedFile removes snippet lines from a specific file
   async getClearedFile(file) {
     let omit = false;
     const newFileLines = [];
     for (const line of file.lines) {
-      if (line.includes(writeEnd)) {
+      if (line.includes(writeEnd) || line.includes(snipFileEnd)) {
         omit = false;
       }
       if (!omit) {
         newFileLines.push(line);
       }
-      if (line.includes(writeStart)) {
+      if (line.includes(writeStart) || line.includes(snipFileStart)) {
         omit = true;
       }
     }
     file.lines = newFileLines;
     return file;
   }
+
   // writeFiles writes file lines to target files
   async writeFiles(files) {
     this.progress.updateOperation("writing updated files");
@@ -449,6 +512,7 @@ class Sync {
     }
     return;
   }
+
   // cleanUp deletes temporary files and folders
   async cleanUp() {
     this.progress.updateOperation("cleaning up");
@@ -459,6 +523,7 @@ class Sync {
     return;
   }
 }
+
 // determineExtension returns the file extension
 function determineExtension(filePath) {
   const parts = filePath.split(".");
@@ -480,7 +545,7 @@ const writeMatchRegexp = new RegExp(
     escapeStringRegexp(writeStartClose)
 );
 
-// extractReadID uses regex to exract the id from a string
+// extractReadID uses regex to extract the id from a string
 function extractReadID(line) {
   const matches = line.match(readMatchRegexp);
   return matches[1];
@@ -492,13 +557,13 @@ function extractWriteIDAndConfig(line) {
   let id = matches[1];
   let config = {};
   try {
-    config =  matches[2] ? JSON.parse(matches[2]) : undefined ;
+    config = matches[2] ? JSON.parse(matches[2]) : undefined;
   } catch {
     console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
     config = undefined;
   }
 
-  return {id, config};
+  return { id, config };
 }
 
 // overwriteConfig uses values if provided in the snippet placeholder

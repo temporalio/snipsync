@@ -9,4 +9,6 @@ module.exports = {
   writeStart: '<!--SNIPSTART',
   writeStartClose: '-->',
   writeEnd: '<!--SNIPEND',
+  snipFileStart: '<!--SNIPFILE',
+  snipFileEnd: '<!--SNIPFILEEND',
 };
