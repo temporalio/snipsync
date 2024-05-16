@@ -467,6 +467,8 @@ async getSplicedFile(snippets, file) {
   let lookForStop = false;
   let spliceStart = 0;
   let config;
+  let currentSnippetId = null;
+
   for (let [idx, line] of staticFile.lines.entries()) {
     let extracted = extractWriteIDAndConfig(line);
     if (line.includes(writeStart) || line.includes(snipFileStart)) {
@@ -500,20 +502,22 @@ async getSplicedFile(snippets, file) {
           config = overwriteConfig(this.config.features, extracted.config);
           spliceStart = fileLineNumber;
           lookForStop = true;
+          currentSnippetId = extracted.id;
         }
       }
     }
     if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
-      const snippet = snippets.find((s) => s.id === extracted.id);
+      const snippet = snippets.find((s) => s.id === currentSnippetId);
       if (snippet) {
         dynamicFile = await this.spliceFile(
           spliceStart,
-          fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
+          fileLineNumber,
           snippet,
           dynamicFile,
           config
         );
         lookForStop = false;
+        currentSnippetId = null;
       }
     }
     fileLineNumber++;
@@ -525,7 +529,7 @@ async getSplicedFile(snippets, file) {
 async spliceFile(start, end, snippet, file, config) {
   const fileLines = file.lines;
   const head = fileLines.slice(0, start + 1); // +1 to include the writeStart/snipFileStart line
-  const tail = fileLines.slice(end);
+  const tail = fileLines.slice(end); // Include the end marker line
   const snippetLines = snippet.fmt(config);
   const mergedLines = head.concat(snippetLines, tail);
   const mergedFile = new File(file.filename, file.fullpath);
@@ -533,8 +537,7 @@ async spliceFile(start, end, snippet, file, config) {
   return mergedFile;
 }
 
-
-  // writeFiles writes the spliced file objects to the target directories// writeFiles writes the spliced file objects to the target directories
+// writeFiles writes the spliced file objects to the target directories
 async writeFiles(files) {
   this.progress.updateOperation("writing files");
   await Promise.all(
@@ -552,7 +555,6 @@ async writeFiles(files) {
   );
   return;
 }
-
 
   // clearSnippets removes code snippets from the target files
   async clearSnippets(files) {
