@@ -460,6 +460,7 @@ class Sync {
   }
 
 // getSplicedFile merges snippets into a single file
+// getSplicedFile merges snippets into a single file
 async getSplicedFile(snippets, file) {
   const staticFile = file;
   let dynamicFile = file;
@@ -511,7 +512,7 @@ async getSplicedFile(snippets, file) {
       if (snippet) {
         dynamicFile = await this.spliceFile(
           spliceStart,
-          fileLineNumber,
+          fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
           snippet,
           dynamicFile,
           config
@@ -554,26 +555,6 @@ async writeFiles(files) {
     })
   );
   return;
-}
-
-  // clearSnippets removes code snippets from the target files
-  async clearSnippets(files) {
-    const clearedFiles = files.map((file) => {
-      const clearedLines = file.lines.filter(
-        (line) => !line.includes(writeStart) && !line.includes(writeEnd)
-      );
-      const clearedFile = new File(file.filename, file.fullpath);
-      clearedFile.lines = clearedLines;
-      return clearedFile;
-    });
-    return clearedFiles;
-  }
-
-  // cleanUp deletes the extraction directory
-  async cleanUp() {
-    await rimrafAsync(extractionDir);
-    return;
-  }
 }
 
 // selectLines uses configuration parameters to select specific lines from a file
