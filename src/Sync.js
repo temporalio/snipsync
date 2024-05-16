@@ -340,6 +340,18 @@ class Sync {
     return;
   }
 
+  // getFileContent gets the content of a single file from Github
+  async getFileContent(owner, repo, ref, filePath) {
+    const result = await this.github.repos.getContent({
+      owner,
+      repo,
+      path: filePath,
+      ref,
+    });
+    const content = Buffer.from(result.data.content, 'base64');
+    return content;
+  }
+
   // extractSnippets is the method that retrieves code snippets from the downloaded repos
   async extractSnippets(repositories) {
     const snippets = [];
