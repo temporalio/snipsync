@@ -146,6 +146,7 @@ class File {
   }
 }
 
+
 class ProgressBar {
   constructor() {
     this.bar = new progress.Bar(
@@ -539,6 +540,7 @@ class Sync {
     );
     return;
   }
+  
 
   // clearSnippets removes code snippets from the target files
   async clearSnippets(files) {
