@@ -269,6 +269,7 @@ class Sync {
             owner,
             repo,
             ref,
+            filePaths: [],
           });
           return;
         }
@@ -350,6 +351,9 @@ class Sync {
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
       repositories.map(async (repo) => {
+        if (!repo.filePaths) {
+          return;
+        }
         await Promise.all(
           repo.filePaths.map(async (filePath) => {
             const snippetsFromFile = await this.extractSnippetsFromFile(
@@ -464,6 +468,15 @@ class Sync {
               allowed_target_extensions: this.config.features.allowed_target_extensions,
               enable_code_dedenting: this.config.features.enable_code_dedenting,
             };
+            const byteArray = await this.getFileContent(owner, repo, ref, filePath);
+            const content = arrayBuffToBuff(byteArray).toString();
+            const fileLines = content.split('\n');
+            const snippet = new Snippet(filePath, path.extname(filePath).substring(1), owner, repo, ref, {
+              directory: dirname(filePath),
+              name: basename(filePath),
+            });
+            snippet.lines = fileLines;
+            snippets.push(snippet);
           }
         }
         if (extracted.id !== null) {
