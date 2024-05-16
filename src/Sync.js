@@ -460,8 +460,9 @@ class Sync {
     let config;
     for (let [idx, _] of staticFile.lines.entries()) {
       const line = file.lines[idx];
+      let extracted = extractWriteIDAndConfig(line);
       if (line.includes(writeStart) || line.includes(snipFileStart)) {
-        const extracted = extractWriteIDAndConfig(line);
+        extracted = extractWriteIDAndConfig(line);
         if (extracted.id === null) {
           const snipMatch = line.match(
             /<!--SNIPFILE (https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^ ]+)) -->/
@@ -512,6 +513,7 @@ class Sync {
     }
     return dynamicFile;
   }
+  
 
   // spliceFile inserts the snippets into the file
   async spliceFile(start, end, snippet, file, config) {
