@@ -535,18 +535,25 @@ class Sync {
     return mergedFile;
   }
 
-  // writeFiles writes the spliced file objects to the target directories
-  async writeFiles(files) {
-    this.progress.updateOperation("writing files");
-    await Promise.all(
-      files.map(async (file) => {
-        const output = file.fileString(this.config.features.enable_code_dedenting);
-        const fullpath = path.join(file.fullpath, file.filename);
-        await writeAsync(fullpath, output);
-      })
-    );
-    return;
-  }
+  // writeFiles writes the spliced file objects to the target directories// writeFiles writes the spliced file objects to the target directories
+async writeFiles(files) {
+  this.progress.updateOperation("writing files");
+  await Promise.all(
+    files.map(async (file) => {
+      // Ensure file is an instance of File
+      if (!(file instanceof File)) {
+        file = new File(file.filename, file.fullpath);
+        file.lines = file.lines || [];
+      }
+      
+      const output = file.fileString(this.config.features.enable_code_dedenting);
+      const fullpath = path.join(file.fullpath, file.filename);
+      await writeAsync(fullpath, output);
+    })
+  );
+  return;
+}
+
 
   // clearSnippets removes code snippets from the target files
   async clearSnippets(files) {
