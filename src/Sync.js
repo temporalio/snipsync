@@ -29,8 +29,17 @@ const glob = require("glob");
 // Convert dependency functions to return promises
 const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
-const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
+
+// Custom promisified version of eachLine
+const eachLineAsync = (filePath, cb) => {
+  return new Promise((resolve, reject) => {
+    eachLine(filePath, cb, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
 
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
@@ -58,7 +67,7 @@ class Snippet {
       lines.push(textline);
     }
     if (config.select !== undefined) {
-      const selectedLines = selectLines(config.select, this.lines, this.ext);
+      const selectedLines = selectLines(config.select, this.lines);
       lines.push(...selectedLines);
     } else if (!config.startPattern && !config.endPattern) {
       lines.push(...this.lines);
@@ -145,7 +154,6 @@ class File {
     return lines;
   }
 }
-
 
 class ProgressBar {
   constructor() {
@@ -349,7 +357,7 @@ class Sync {
       path: filePath,
       ref,
     });
-    const content = Buffer.from(result.data.content, 'base64');
+    const content = Buffer.from(result.data.content, 'base64').toString('utf8');
     return content;
   }
 
@@ -515,7 +523,6 @@ class Sync {
     return dynamicFile;
   }
   
-
   // spliceFile inserts the snippets into the file
   async spliceFile(start, end, snippet, file, config) {
     const fileLines = file.lines;
@@ -540,7 +547,6 @@ class Sync {
     );
     return;
   }
-  
 
   // clearSnippets removes code snippets from the target files
   async clearSnippets(files) {
@@ -595,40 +601,23 @@ function extractWriteIDAndConfig(line) {
   let id = matches[1];
   let config = {};
   try {
-    config = matches[2] ? JSON.parse(matches[2]) : undefined;
-  } catch {
-    console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
-    config = undefined;
+    config = matches[2] ? JSON.parse(matches[2]) : {};
+  } catch (error) {
+    console.error(`Unable to parse JSON in options for ${id} - ignoring options`, error);
   }
   return { id, config };
 }
 
 // overwriteConfig uses values if provided in the snippet placeholder
 function overwriteConfig(current, extracted) {
-  let config = {};
-
-  config.enable_source_link =
-    extracted?.enable_source_link ?? true
-      ? current.enable_source_link
-      : extracted.enable_source_link;
-
-  config.enable_code_block =
-    extracted?.enable_code_block ?? true
-      ? current.enable_code_block
-      : extracted.enable_code_block;
-
-  if (extracted?.highlightedLines ?? undefined) {
-    config.highlights = extracted.highlightedLines;
-  }
-
-  if (extracted?.selectedLines) {
-    config.select = extracted.selectedLines;
-  }
-
-  config.startPattern = (extracted?.startPattern ?? false) ? extracted.startPattern : false;
-  config.endPattern = (extracted?.endPattern ?? false) ? extracted.endPattern : false;
-
-  return config;
+  return {
+    enable_source_link: extracted?.enable_source_link ?? current.enable_source_link,
+    enable_code_block: extracted?.enable_code_block ?? current.enable_code_block,
+    highlights: extracted?.highlightedLines ?? current.highlights,
+    select: extracted?.selectedLines ?? current.select,
+    startPattern: extracted?.startPattern ?? current.startPattern,
+    endPattern: extracted?.endPattern ?? current.endPattern,
+  };
 }
 
 module.exports = { Sync };
