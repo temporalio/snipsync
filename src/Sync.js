@@ -458,122 +458,105 @@ class Sync {
     );
     return splicedFiles;
   }
+// getSplicedFile merges snippets into a single file
+async getSplicedFile(snippets, file) {
+  const staticFile = file;
+  let dynamicFile = file;
+  let fileLineNumber = 0;
+  let lookForStop = false;
+  let spliceStart = 0;
+  let config;
+  let currentSnippetId = null;
 
-  // getSplicedFile merges snippets into a single file
-  async getSplicedFile(snippets, file) {
-    const staticFile = file;
-    let dynamicFile = file;
-    let fileLineNumber = 0;
-    let lookForStop = false;
-    let spliceStart = 0;
-    let config;
-    let currentSnippetId = null;
-
-    for (let [idx, line] of staticFile.lines.entries()) {
-      let extracted = extractWriteIDAndConfig(line);
-      if (line.includes(writeStart) || line.includes(snipFileStart)) {
-        extracted = extractWriteIDAndConfig(line);
-        if (extracted.id === null) {
-          const snipMatch = line.match(
-            /<!--SNIPFILE (https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^ ]+)) -->/
-          );
-          if (snipMatch) {
-            const [url, , owner, repo, ref, filePath] = snipMatch;
-            extracted.id = filePath;
-            extracted.config = {
-              enable_source_link: this.config.features.enable_source_link,
-              enable_code_block: this.config.features.enable_code_block,
-              allowed_target_extensions: this.config.features.allowed_target_extensions,
-              enable_code_dedenting: this.config.features.enable_code_dedenting,
-            };
-            const content = await this.getFileContent(owner, repo, ref, filePath);
-            const fileLines = content.split('\n');
-            const snippet = new Snippet(filePath, path.extname(filePath).substring(1), owner, repo, ref, {
-              directory: dirname(filePath),
-              name: basename(filePath),
-            });
-            snippet.lines = fileLines;
-            snippets.push(snippet);
-          }
-        }
-        if (extracted.id !== null) {
-          const snippet = snippets.find((s) => s.id === extracted.id);
-          if (snippet) {
-            config = overwriteConfig(this.config.features, extracted.config);
-            spliceStart = fileLineNumber;
-            lookForStop = true;
-            currentSnippetId = extracted.id;
-          }
+  for (let [idx, line] of staticFile.lines.entries()) {
+    let extracted = extractWriteIDAndConfig(line);
+    if (line.includes(writeStart) || line.includes(snipFileStart)) {
+      extracted = extractWriteIDAndConfig(line);
+      if (extracted.id === null) {
+        const snipMatch = line.match(
+          /<!--SNIPFILE (https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^ ]+)) -->/
+        );
+        if (snipMatch) {
+          const [url, , owner, repo, ref, filePath] = snipMatch;
+          extracted.id = filePath;
+          extracted.config = {
+            enable_source_link: this.config.features.enable_source_link,
+            enable_code_block: this.config.features.enable_code_block,
+            allowed_target_extensions: this.config.features.allowed_target_extensions,
+            enable_code_dedenting: this.config.features.enable_code_dedenting,
+          };
+          const content = await this.getFileContent(owner, repo, ref, filePath);
+          const fileLines = content.split('\n');
+          const snippet = new Snippet(filePath, path.extname(filePath).substring(1), owner, repo, ref, {
+            directory: dirname(filePath),
+            name: basename(filePath),
+          });
+          snippet.lines = fileLines;
+          snippets.push(snippet);
         }
       }
-      if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
-        const snippet = snippets.find((s) => s.id === currentSnippetId);
+      if (extracted.id !== null) {
+        const snippet = snippets.find((s) => s.id === extracted.id);
         if (snippet) {
-          dynamicFile = await this.spliceFile(
-            spliceStart,
-            fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
-            snippet,
-            dynamicFile,
-            config
-          );
-          lookForStop = false;
-          currentSnippetId = null;
+          config = overwriteConfig(this.config.features, extracted.config);
+          spliceStart = fileLineNumber;
+          lookForStop = true;
+          currentSnippetId = extracted.id;
         }
       }
-      fileLineNumber++;
     }
-    return dynamicFile;
+    if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
+      const snippet = snippets.find((s) => s.id === currentSnippetId);
+      if (snippet) {
+        dynamicFile = await this.spliceFile(
+          spliceStart,
+          fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
+          snippet,
+          dynamicFile,
+          config
+        );
+        lookForStop = false;
+        currentSnippetId = null;
+      }
+    }
+    fileLineNumber++;
   }
+  return dynamicFile;
+}
 
-  // spliceFile inserts the snippets into the file
-  async spliceFile(start, end, snippet, file, config) {
-    const fileLines = file.lines;
-    const head = fileLines.slice(0, start + 1); // +1 to include the writeStart/snipFileStart line
-    const tail = fileLines.slice(end); // Include the end marker line
-    const snippetLines = snippet.fmt(config);
-    const mergedLines = head.concat(snippetLines, tail);
-    const mergedFile = new File(file.filename, file.fullpath);
-    mergedFile.lines = mergedLines;
-    return mergedFile;
-  }
+// spliceFile inserts the snippets into the file
+async spliceFile(start, end, snippet, file, config) {
+  const fileLines = file.lines;
+  const head = fileLines.slice(0, start + 1); // +1 to include the writeStart/snipFileStart line
+  const tail = fileLines.slice(end); // Include the end marker line
+  const snippetLines = snippet.fmt(config);
 
-  // writeFiles writes the spliced file objects to the target directories
-  async writeFiles(files) {
-    this.progress.updateOperation("writing files");
-    await Promise.all(
-      files.map(async (file) => {
-        // Ensure file is an instance of File
-        if (!(file instanceof File)) {
-          file = new File(file.filename, file.fullpath);
-          file.lines = file.lines || [];
-        }
-        
-        const output = file.fileString(this.config.features.enable_code_dedenting);
-        const fullpath = path.join(file.fullpath, file.filename);
-        await writeAsync(fullpath, output);
-      })
-    );
-    return;
-  }
+  // Add separation between snippets
+  const separator = ['', '']; // Two empty lines to separate code blocks
 
-  // clearSnippets removes code snippets from the target files
-  async clearSnippets(files) {
-    const clearedFiles = files.map((file) => {
-      const clearedLines = file.lines.filter(
-        (line) => !line.includes(writeStart) && !line.includes(writeEnd)
-      );
-      const clearedFile = new File(file.filename, file.fullpath);
-      clearedFile.lines = clearedLines;
-      return clearedFile;
-    });
-    return clearedFiles;
-  }
+  const mergedLines = head.concat(separator, snippetLines, separator, tail);
+  const mergedFile = new File(file.filename, file.fullpath);
+  mergedFile.lines = mergedLines;
+  return mergedFile;
+}
 
-  // cleanUp deletes the extraction directory
-  async cleanUp() {
-    await rimrafAsync(extractionDir);
-    return;
-  }
+// writeFiles writes the spliced file objects to the target directories
+async writeFiles(files) {
+  this.progress.updateOperation("writing files");
+  await Promise.all(
+    files.map(async (file) => {
+      // Ensure file is an instance of File
+      if (!(file instanceof File)) {
+        file = new File(file.filename, file.fullpath);
+        file.lines = file.lines || [];
+      }
+      
+      const output = file.fileString(this.config.features.enable_code_dedenting);
+      const fullpath = path.join(file.fullpath, file.filename);
+      await writeAsync(fullpath, output);
+    })
+  );
+  return;
 }
 
 // selectLines uses configuration parameters to select specific lines from a file
