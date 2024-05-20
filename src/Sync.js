@@ -283,280 +283,278 @@ class Sync {
         const { owner, repo, ref } = origin;
         const repository = new Repo('remote', owner, repo, ref);
         const byteArray = await this.getArchive(owner, repo, ref);
-        const fileName = `${repo}.zip`;
-        const zipBuffer = arrayBuffToBuff(byteArray);
-        await this.saveArchive(fileName, zipBuffer);
-        const extractionPath = join(extractionDir, repo);
-        await this.extractArchive(fileName, extractionPath);
-        const paths = await this.getFilePaths(extractionPath);
-        repository.filePaths = paths.map((path) => ({
-          name: basename(path),
-          directory: dirname(path),
+        const destDir = path.join(rootDir, extractionDir, repo);
+        const dest = `${destDir}.zip`;
+        const repoPath = `${extractionDir}/${repo}`;
+        await writeAsync(dest, arrayBuffToBuff(byteArray));
+        await anzip(dest, { outputPath: destDir });
+        const filePaths = await readdirp.promise(repoPath, { type: "files" });
+        repository.filePaths = filePaths.map((f) => ({
+          name: f.basename,
+          directory: f.dirname,
         }));
         repositories.push(repository);
-        await this.cleanArchive(fileName);
+        await unlinkAsync(dest);
       })
     );
+    this.progress.updateOperation("source files retrieved");
     return repositories;
   }
 
-  // getArchive is a method that downloads a GitHub repo as a zip file
-  async getArchive(owner, repo, ref) {
-    this.logger.info(
-      `downloading archive from https://github.com/${owner}/${repo}`
-    );
-    const { data } = await this.github.repos.downloadZipballArchive({
+  // getArchive gets the Github repo as a zip file
+  async getArchive(owner, repo, ref = "main") {
+    const options = {
       owner,
       repo,
+      archive_format: "zipball",
       ref,
-    });
-    return data;
+    };
+    const response = await this.github.repos.downloadArchive(options);
+    return response.data;
   }
 
-  // saveArchive is a method that writes a zip file to the extraction directory
-  async saveArchive(fileName, byteArray) {
-    const fullPath = join(rootDir, fileName);
-    await writeAsync(fullPath, byteArray);
-    return;
-  }
-
-  // extractArchive is a method that unzips a file to the extraction directory
-  async extractArchive(fileName, extractionPath) {
-    const zipPath = join(rootDir, fileName);
-    const buffer = await promisify(anzip)(zipPath);
-    await Promise.all(
-      buffer.files.map(async (file) => {
-        const filePath = path.join(extractionPath, file.path);
-        await writeAsync(filePath, file.buffer);
-      })
-    );
-    return;
-  }
-
-  // getFilePaths returns an array of the filenames for the files extracted from the repos
-  async getFilePaths(repoPath) {
-    const paths = [];
-    for await (const entry of readdirp(repoPath, { type: "files" })) {
-      paths.push(entry.fullPath);
-    }
-    return paths;
-  }
-
-  // cleanArchive deletes the zip file in the sync_repos directory
-  async cleanArchive(fileName) {
-    const zipPath = join(rootDir, fileName);
-    await unlinkAsync(zipPath);
-    return;
-  }
-
-  // getFileContent gets the content of a single file from Github
-  async getFileContent(owner, repo, ref, filePath) {
-    const result = await this.github.repos.getContent({
+  // getFileContent gets the content of a Github repo file
+  async getFileContent(owner, repo, ref, path) {
+    const options = {
       owner,
       repo,
-      path: filePath,
+      path,
       ref,
-    });
-    const content = Buffer.from(result.data.content, 'base64').toString('utf8');
-    return content;
+    };
+    const response = await this.github.repos.getContent(options);
+    const buffer = Buffer.from(response.data.content, "base64");
+    return buffer.toString("utf8");
   }
 
-  // extractSnippets is the method that retrieves code snippets from the downloaded repos
+  // extractSnippets scrapes the snippets from the repos
   async extractSnippets(repositories) {
     const snippets = [];
-    this.progress.updateOperation("extracting snippets");
-    await Promise.all(
-      repositories.map(async (repo) => {
-        if (!repo.filePaths) {
-          return;
-        }
-        await Promise.all(
-          repo.filePaths.map(async (filePath) => {
-            const snippetsFromFile = await this.extractSnippetsFromFile(
-              repo,
-              filePath
-            );
-            snippets.push(...snippetsFromFile);
-          })
-        );
-      })
-    );
-    this.progress.updateTotal(snippets.length);
-    return snippets;
-  }
-
-  // extractSnippetsFromFile reads a file and finds code snippets marked by comments
-  async extractSnippetsFromFile(repo, filePath) {
-    const snippets = [];
-    const { owner, repo: repoName, ref } = repo;
-    const idRegex = new RegExp(/\s*\/\/\s*<(\w+)>/);
-    const endIdRegex = new RegExp(/\s*\/\/\s*<\/(\w+)>/);
-    const file = new File(filePath.name, filePath.directory);
-    let snippet = null;
-    await eachLineAsync(join(filePath.directory, filePath.name), (line) => {
-      if (idRegex.test(line)) {
-        const match = line.match(idRegex);
-        const id = match[1];
-        snippet = new Snippet(
-          id,
-          path.extname(filePath.name).slice(1),
-          owner,
-          repoName,
-          ref,
-          filePath
-        );
-      }
-      if (snippet !== null) {
-        snippet.lines.push(line);
-      }
-      if (endIdRegex.test(line)) {
-        snippets.push(snippet);
-        snippet = null;
-      }
-    });
-    return snippets;
-  }
-
-  // getTargetFilesInfos gets the filepaths for all target files in the configured directories
-  async getTargetFilesInfos() {
-    const targetFilesInfos = [];
-    await Promise.all(
-      this.config.targets.map(async (target) => {
-        const pattern = path.join(target, "**/*");
-        const matches = glob.sync(pattern).map((f) => ({
-          filename: path.basename(f),
-          fullpath: path.dirname(f),
-        }));
-        targetFilesInfos.push(...matches);
-      })
-    );
-    return targetFilesInfos;
-  }
-
-  // getTargetFilesLines reads the target files and adds the lines to the file object
-  async getTargetFilesLines(targetFiles) {
-    await Promise.all(
-      targetFiles.map(async (file) => {
-        file.lines = [];
-        await eachLineAsync(join(file.fullpath, file.filename), (line) => {
-          file.lines.push(line);
+    for (const repo of repositories) {
+      for (const filePath of repo.filePaths) {
+        const filename = filePath.name;
+        const fullpath = path.join(repo.owner, repo.repo, filePath.directory, filename);
+        const lines = [];
+        await eachLineAsync(fullpath, (line) => {
+          lines.push(line);
         });
-      })
-    );
-    return targetFiles;
+        const file = new File(filename, fullpath);
+        file.lines = lines;
+        const updatedSnippets = await this.getSnippets(file, repo);
+        snippets.push(...updatedSnippets);
+      }
+    }
+    return snippets;
   }
 
-  // spliceSnippets merges the code snippets into the target files
-  async spliceSnippets(snippets, targetFiles) {
-    this.progress.updateOperation("splicing code snippets");
+  // getSnippets reads a file and gets the text between the readStart/readEnd lines
+  async getSnippets(file, repo) {
+    const snippets = [];
+    const { lines } = file;
+    let snippetLines = [];
+    let recording = false;
+    let id = null;
+    for (const line of lines) {
+      if (line.includes(readEnd)) {
+        recording = false;
+        const snippet = new Snippet(id, path.extname(file.filename).substring(1), repo.owner, repo.repo, repo.ref, {
+          directory: dirname(file.fullpath),
+          name: basename(file.fullpath),
+        });
+        snippet.lines = snippetLines;
+        snippets.push(snippet);
+        snippetLines = [];
+      }
+      if (recording) {
+        snippetLines.push(line);
+      }
+      if (line.includes(readStart)) {
+        const extracted = extractWriteIDAndConfig(line);
+        id = extracted.id;
+        recording = true;
+      }
+    }
+    return snippets;
+  }
+
+  // getTargetFilesInfos gets the paths to target files
+  async getTargetFilesInfos() {
+    const filePaths = [];
+    for (const targetDir of this.config.target) {
+      const files = await readdirp.promise(targetDir, { type: "files" });
+      files.forEach((f) => filePaths.push({ filename: f.basename, fullpath: f.fullPath }));
+    }
+    return filePaths;
+  }
+
+  // getTargetFilesLines reads each target file and gets the lines
+  async getTargetFilesLines(files) {
+    for (const file of files) {
+      const lines = [];
+      await eachLineAsync(file.fullpath, (line) => {
+        lines.push(line);
+      });
+      file.lines = lines;
+    }
+    return files;
+  }
+
+  // spliceSnippets adds snippets to the target file objects
+  async spliceSnippets(snippets, files) {
+    this.progress.updateOperation("splicing snippets");
     const splicedFiles = await Promise.all(
-      targetFiles.map(async (file) => {
-        const splicedFile = await this.getSplicedFile(snippets, file);
-        this.progress.increment();
-        return splicedFile;
+      files.map(async (file) => {
+        const dynamicFile = await this.getSplicedFile(snippets, file);
+        return dynamicFile;
       })
     );
     return splicedFiles;
   }
-// getSplicedFile merges snippets into a single file
-async getSplicedFile(snippets, file) {
-  const staticFile = file;
-  let dynamicFile = file;
-  let fileLineNumber = 0;
-  let lookForStop = false;
-  let spliceStart = 0;
-  let config;
-  let currentSnippetId = null;
 
-  for (let [idx, line] of staticFile.lines.entries()) {
-    let extracted = extractWriteIDAndConfig(line);
-    if (line.includes(writeStart) || line.includes(snipFileStart)) {
-      extracted = extractWriteIDAndConfig(line);
-      if (extracted.id === null) {
-        const snipMatch = line.match(
-          /<!--SNIPFILE (https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^ ]+)) -->/
-        );
-        if (snipMatch) {
-          const [url, , owner, repo, ref, filePath] = snipMatch;
-          extracted.id = filePath;
-          extracted.config = {
-            enable_source_link: this.config.features.enable_source_link,
-            enable_code_block: this.config.features.enable_code_block,
-            allowed_target_extensions: this.config.features.allowed_target_extensions,
-            enable_code_dedenting: this.config.features.enable_code_dedenting,
-          };
-          const content = await this.getFileContent(owner, repo, ref, filePath);
-          const fileLines = content.split('\n');
-          const snippet = new Snippet(filePath, path.extname(filePath).substring(1), owner, repo, ref, {
-            directory: dirname(filePath),
-            name: basename(filePath),
-          });
-          snippet.lines = fileLines;
-          snippets.push(snippet);
+  // getSplicedFile merges snippets into a single file
+  async getSplicedFile(snippets, file) {
+    const staticFile = file;
+    let dynamicFile = file;
+    let fileLineNumber = 0;
+    let lookForStop = false;
+    let spliceStart = 0;
+    let config;
+    let currentSnippetId = null;
+
+    for (let [idx, line] of staticFile.lines.entries()) {
+      let extracted = extractWriteIDAndConfig(line);
+      if (line.includes(writeStart) || line.includes(snipFileStart)) {
+        extracted = extractWriteIDAndConfig(line);
+        if (extracted.id === null) {
+          const snipMatch = line.match(
+            /<!--SNIPFILE (https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/([^ ]+)) -->/
+          );
+          if (snipMatch) {
+            const [url, , owner, repo, ref, filePath] = snipMatch;
+            extracted.id = filePath;
+            extracted.config = {
+              enable_source_link: this.config.features.enable_source_link,
+              enable_code_block: this.config.features.enable_code_block,
+              allowed_target_extensions: this.config.features.allowed_target_extensions,
+              enable_code_dedenting: this.config.features.enable_code_dedenting,
+            };
+            const content = await this.getFileContent(owner, repo, ref, filePath);
+            const fileLines = content.split("\n");
+            const snippet = new Snippet(filePath, path.extname(filePath).substring(1), owner, repo, ref, {
+              directory: dirname(filePath),
+              name: basename(filePath),
+            });
+            snippet.lines = fileLines;
+            snippets.push(snippet);
+          }
+        }
+        if (extracted.id !== null) {
+          const snippet = snippets.find((s) => s.id === extracted.id);
+          if (snippet) {
+            config = overwriteConfig(this.config.features, extracted.config);
+            spliceStart = fileLineNumber;
+            lookForStop = true;
+            currentSnippetId = extracted.id;
+          }
         }
       }
-      if (extracted.id !== null) {
-        const snippet = snippets.find((s) => s.id === extracted.id);
+      if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
+        const snippet = snippets.find((s) => s.id === currentSnippetId);
         if (snippet) {
-          config = overwriteConfig(this.config.features, extracted.config);
-          spliceStart = fileLineNumber;
-          lookForStop = true;
-          currentSnippetId = extracted.id;
+          dynamicFile = await this.spliceFile(
+            spliceStart,
+            fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
+            snippet,
+            dynamicFile,
+            config
+          );
+          lookForStop = false;
+          currentSnippetId = null;
         }
       }
+      fileLineNumber++;
     }
-    if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
-      const snippet = snippets.find((s) => s.id === currentSnippetId);
-      if (snippet) {
-        dynamicFile = await this.spliceFile(
-          spliceStart,
-          fileLineNumber + 1, // +1 to include the line with writeEnd/snipFileEnd
-          snippet,
-          dynamicFile,
-          config
-        );
-        lookForStop = false;
-        currentSnippetId = null;
-      }
-    }
-    fileLineNumber++;
+    return dynamicFile;
   }
-  return dynamicFile;
-}
 
-// spliceFile inserts the snippets into the file
-async spliceFile(start, end, snippet, file, config) {
-  const fileLines = file.lines;
-  const head = fileLines.slice(0, start + 1); // +1 to include the writeStart/snipFileStart line
-  const tail = fileLines.slice(end); // Include the end marker line
-  const snippetLines = snippet.fmt(config);
+  // spliceFile inserts the snippets into the file
+  async spliceFile(start, end, snippet, file, config) {
+    const fileLines = file.lines;
+    const head = fileLines.slice(0, start + 1); // +1 to include the writeStart/snipFileStart line
+    const tail = fileLines.slice(end); // Include the end marker line
+    const snippetLines = snippet.fmt(config);
 
-  // Add separation between snippets
-  const separator = ['', '']; // Two empty lines to separate code blocks
+    // Add separation between snippets
+    const separator = ['', '']; // Two empty lines to separate code blocks
 
-  const mergedLines = head.concat(separator, snippetLines, separator, tail);
-  const mergedFile = new File(file.filename, file.fullpath);
-  mergedFile.lines = mergedLines;
-  return mergedFile;
-}
+    const mergedLines = head.concat(separator, snippetLines, separator, tail);
+    const mergedFile = new File(file.filename, file.fullpath);
+    mergedFile.lines = mergedLines;
+    return mergedFile;
+  }
 
-// writeFiles writes the spliced file objects to the target directories
-async writeFiles(files) {
-  this.progress.updateOperation("writing files");
-  await Promise.all(
-    files.map(async (file) => {
-      // Ensure file is an instance of File
-      if (!(file instanceof File)) {
-        file = new File(file.filename, file.fullpath);
-        file.lines = file.lines || [];
+  // writeFiles writes the spliced file objects to the target directories
+  async writeFiles(files) {
+    this.progress.updateOperation("writing files");
+    await Promise.all(
+      files.map(async (file) => {
+        // Ensure file is an instance of File
+        if (!(file instanceof File)) {
+          file = new File(file.filename, file.fullpath);
+          file.lines = file.lines || [];
+        }
+        
+        const output = file.fileString(this.config.features.enable_code_dedenting);
+        const fullpath = path.join(file.fullpath, file.filename);
+        await writeAsync(fullpath, output);
+      })
+    );
+    return;
+  }
+
+  // clearSnippets clears snippets from the target files
+  async clearSnippets(files) {
+    const clearedFiles = files.map((file) => {
+      const staticFile = file;
+      let dynamicFile = file;
+      let fileLineNumber = 0;
+      let lookForStop = false;
+      let spliceStart = 0;
+      let currentSnippetId = null;
+
+      for (let [idx, line] of staticFile.lines.entries()) {
+        let extracted = extractWriteIDAndConfig(line);
+        if (line.includes(writeStart) || line.includes(snipFileStart)) {
+          extracted = extractWriteIDAndConfig(line);
+          if (extracted.id !== null) {
+            spliceStart = fileLineNumber;
+            lookForStop = true;
+            currentSnippetId = extracted.id;
+          }
+        }
+        if ((line.includes(writeEnd) || line.includes(snipFileEnd)) && lookForStop) {
+          const snippet = snippets.find((s) => s.id === currentSnippetId);
+          if (snippet) {
+            const head = staticFile.lines.slice(0, spliceStart + 1);
+            const tail = staticFile.lines.slice(fileLineNumber + 1);
+            const mergedLines = head.concat(tail);
+            dynamicFile = new File(staticFile.filename, staticFile.fullpath);
+            dynamicFile.lines = mergedLines;
+            lookForStop = false;
+            currentSnippetId = null;
+          }
+        }
+        fileLineNumber++;
       }
-      
-      const output = file.fileString(this.config.features.enable_code_dedenting);
-      const fullpath = path.join(file.fullpath, file.filename);
-      await writeAsync(fullpath, output);
-    })
-  );
-  return;
+      return dynamicFile;
+    });
+    return clearedFiles;
+  }
+
+  // cleanUp deletes the extraction directory
+  async cleanUp() {
+    await rimrafAsync(extractionDir);
+    return;
+  }
 }
 
 // selectLines uses configuration parameters to select specific lines from a file
