@@ -559,7 +559,7 @@ function selectLines(selectNumbers, lines, fileExtension) {
       nums = [num - 1, num];
     }
 
-    if (nums[0] != 0) {
+    if (nums[0] != 0 && config.enable_ellipsis) {
       newLines.push(`${ellipsisComment}`);
     }
     const capture = lines.slice(nums[0], nums[1]);

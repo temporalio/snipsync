@@ -24,6 +24,11 @@ module.exports.readConfig = (logger, file="") => {
     cfg['features']['enable_code_block'] = true;
   }
 
+  // Enable ellipsis between snips
+  if (!Object.prototype.hasOwnProperty.call(cfg.features, 'enable_ellipsis')) {
+    cfg['features']['enable_ellipsis'] = true;
+  }
+
   // If allowed_target_extensions option isn't set, set it to an empty array
   // which will ignore the option and include all files.
   if (!Object.prototype.hasOwnProperty.call(cfg.features, 'allowed_target_extensions')) {
