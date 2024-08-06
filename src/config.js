@@ -25,7 +25,7 @@ module.exports.readConfig = (logger, file="") => {
   }
 
   // Enable ellipsis between snips
-  if (!Object.prototype.hasOwnProperty.call(cfg.features, 'enable_ellipsis')) {
+  if (!Object.prototype.hasOwnProperty.call(cfg.features, 'disable_ellipsis')) {
     cfg['features']['disable_ellipsis'] = true;
   }
 
