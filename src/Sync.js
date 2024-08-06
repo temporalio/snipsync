@@ -30,7 +30,7 @@ const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
-let enable_ellipsis = false;
+let disable_ellipsis = false;
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
   constructor(id, ext, owner, repo, ref, filePath) {
@@ -75,8 +75,8 @@ class Snippet {
     if (config.enable_code_block) {
       lines.push(markdownCodeTicks);
     }
-    if (config.enable_ellipsis) {
-      enable_ellipsis = true;
+    if (config.disable_ellipsis) {
+      disable_ellipsis = true;
     }
     return lines;
   }
@@ -563,7 +563,7 @@ function selectLines(selectNumbers, lines, fileExtension) {
       nums = [num - 1, num];
     }
 
-    if (nums[0] != 0 && enable_ellipsis) {
+    if (nums[0] != 0 && !disable_ellipsis) {
       newLines.push(`${ellipsisComment}`);
     }
     const capture = lines.slice(nums[0], nums[1]);
