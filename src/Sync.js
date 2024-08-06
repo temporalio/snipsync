@@ -30,7 +30,7 @@ const writeAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlink);
 const eachLineAsync = promisify(eachLine);
 const rimrafAsync = promisify(rimraf);
-const enable_ellipsis = false
+let enable_ellipsis = false;
 // Snippet class contains info and methods used for passing and formatting code snippets
 class Snippet {
   constructor(id, ext, owner, repo, ref, filePath) {
