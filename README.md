@@ -147,6 +147,15 @@ That means that if selectedLines is used, the line numbers to highlight are rela
 
 If you use Docusuarus, you just need to add some additional CSS: https://docusaurus.io/docs/markdown-features/code-blocks#line-highlighting
 
+**Regex snipping**
+
+Instead of specifying a set of line numbers to snip, you can use regular expression patterns to mark the start and end of a snip.
+Specify a `startPattern` and an `endPattern`:
+
+```
+<!--SNIPSTART hellouniverse {"startPattern" : "const \\{ greet", "endPattern": "\\}\\)"} -->
+```
+
 ## Run
 
 From the root directory of your project run the following command:
