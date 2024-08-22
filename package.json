@@ -1,10 +1,10 @@
 {
   "name": "snipsync",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Sync docs with github repo code snippets",
   "main": "index.js",
-  "repository": "git@github.com:temporalio/snippetsync.git",
-  "author": "Cully Wakelin <cully@temporal.io>",
+  "repository": "git@github.com:temporalio/snipsync.git",
+  "author": "Alex Garnett <alex.garnett@temporal.io>",
   "license": "MIT",
   "private": false,
   "scripts": {
@@ -17,7 +17,7 @@
     "anzip": "^0.2.0",
     "arraybuffer-to-buffer": "^0.0.7",
     "cli-progress": "^3.8.2",
-    "dedent": "^0.7.0",
+    "dedent": "^1.5.3",
     "glob": "^7.1.6",
     "js-logger": "^1.6.1",
     "line-reader": "^0.4.0",
