@@ -15,7 +15,7 @@ const {
   writeEnd,
 } = require("./common");
 const { writeFile, unlink } = require("fs");
-const dedent = require("dedent");
+const dedent = require("string-dedent");
 const path = require("path");
 const arrayBuffToBuff = require("arraybuffer-to-buffer");
 const anzip = require("anzip");
@@ -79,7 +79,8 @@ class Snippet {
       disable_ellipsis = true;
     }
     if (config.enable_code_dedenting) {
-      let lineString = `${lines.join("\n")}\n`;
+      let lineString = `\`\n${lines.join("\n")}\n\``;
+      console.debug(lineString);
       lineString = dedent(lineString);
       return lineString.split("\n");
     }
@@ -525,6 +526,11 @@ function overwriteConfig(current, extracted) {
     extracted?.enable_code_block ?? true
       ? current.enable_code_block
       : extracted.enable_code_block;
+
+  config.enable_code_dedenting =
+    extracted?.enable_code_dedenting ?? true
+      ? current.enable_code_dedenting
+      : extracted.enable_code_dedenting;
 
   if (extracted?.highlightedLines ?? undefined) {
     config.highlights = extracted.highlightedLines;
