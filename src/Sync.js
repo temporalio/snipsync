@@ -78,6 +78,11 @@ class Snippet {
     if (config.disable_ellipsis) {
       disable_ellipsis = true;
     }
+    if (config.enable_code_dedenting) {
+      let lineString = `${lines.join("\n")}\n`;
+      lineString = dedent(lineString);
+      lines = lineString.split("\n");
+    }
     return lines;
   }
 
@@ -136,13 +141,8 @@ class File {
     this.lines = [];
   }
   // fileString converts the array of lines into a string
-  fileString(dedentCode = false) {
+  fileString() {
     let lines = `${this.lines.join("\n")}\n`;
-
-    if (dedentCode) {
-      lines = dedent(lines);
-    }
-
     return lines;
   }
 }
@@ -454,7 +454,7 @@ class Sync {
     for (const file of files) {
       await writeAsync(
         file.fullpath,
-        file.fileString(this.config.features.enable_code_dedenting)
+        file.fileString()
       );
       this.progress.increment();
     }
