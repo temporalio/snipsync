@@ -81,7 +81,7 @@ class Snippet {
     if (config.enable_code_dedenting) {
       let lineString = `${lines.join("\n")}\n`;
       lineString = dedent(lineString);
-      lines = lineString.split("\n");
+      return lineString.split("\n");
     }
     return lines;
   }
