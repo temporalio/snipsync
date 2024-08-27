@@ -82,7 +82,6 @@ class Snippet {
       let lineString = `
         ${lines.join("\n")}
       `;
-      console.debug(lineString);
       lineString = dedent(lineString);
       return lineString.split("\n");
     }
