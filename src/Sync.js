@@ -79,7 +79,9 @@ class Snippet {
       disable_ellipsis = true;
     }
     if (config.enable_code_dedenting) {
-      let lineString = `\`\n${lines.join("\n")}\n\``;
+      let lineString = `
+        ${lines.join("\n")}
+      `;
       console.debug(lineString);
       lineString = dedent(lineString);
       return lineString.split("\n");
