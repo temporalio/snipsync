@@ -200,7 +200,13 @@ class Sync {
     // Get repository details and file paths.
     const repositories = await this.getRepos();
     // Search each origin file and scrape the snippets
-    const snippets = await this.extractSnippets(repositories);
+    try {
+      const snippets = await this.extractSnippets(repositories);
+    } catch (e) {
+      console.error(e);
+      await this.cleanUp();
+      process.exit(1);
+    }
     // Get the infos (name, path) of all the files in the target directories
     let targetFiles = await this.getTargetFilesInfos();
     // Add the lines of each file
@@ -317,6 +323,12 @@ class Sync {
               capture = true;
               const id = extractReadID(line);
               const snip = new Snippet(id, ext, owner, repo, ref, item);
+              // check for uniqueness of snippet ids before pushing
+              for (const existingSnip of snippets) {
+                if (existingSnip.id == id) {
+                  throw new Error('Snippet name exists in multiple repository sources.');
+                }
+              }
               fileSnips.push(snip);
             }
           });
