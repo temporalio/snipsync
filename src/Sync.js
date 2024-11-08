@@ -200,8 +200,9 @@ class Sync {
     // Get repository details and file paths.
     const repositories = await this.getRepos();
     // Search each origin file and scrape the snippets
+    let snippets = [];
     try {
-      const snippets = await this.extractSnippets(repositories);
+      snippets = await this.extractSnippets(repositories, snippets);
     } catch (e) {
       console.error(e);
       await this.cleanUp();
@@ -295,8 +296,7 @@ class Sync {
     return result.data;
   }
   // extractSnippets returns an array of code snippets that are found in the repositories
-  async extractSnippets(repositories) {
-    const snippets = [];
+  async extractSnippets(repositories, snippets) {
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
       repositories.map(async ({ rtype, owner, repo, ref, filePaths }) => {
@@ -326,7 +326,7 @@ class Sync {
               // check for uniqueness of snippet ids before pushing
               for (const existingSnip of snippets) {
                 if (existingSnip.id == id) {
-                  throw new Error('Snippet name exists in multiple repository sources.');
+                  throw new Error("Snippet name "+existingSnip.id+" exists in multiple repository sources.");
                 }
               }
               fileSnips.push(snip);
