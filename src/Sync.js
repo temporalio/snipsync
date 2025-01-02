@@ -200,7 +200,14 @@ class Sync {
     // Get repository details and file paths.
     const repositories = await this.getRepos();
     // Search each origin file and scrape the snippets
-    const snippets = await this.extractSnippets(repositories);
+    let snippets = [];
+    try {
+      snippets = await this.extractSnippets(repositories, snippets);
+    } catch (e) {
+      console.error(e);
+      await this.cleanUp();
+      process.exit(1);
+    }
     // Get the infos (name, path) of all the files in the target directories
     let targetFiles = await this.getTargetFilesInfos();
     // Add the lines of each file
@@ -289,8 +296,7 @@ class Sync {
     return result.data;
   }
   // extractSnippets returns an array of code snippets that are found in the repositories
-  async extractSnippets(repositories) {
-    const snippets = [];
+  async extractSnippets(repositories, snippets) {
     this.progress.updateOperation("extracting snippets");
     await Promise.all(
       repositories.map(async ({ rtype, owner, repo, ref, filePaths }) => {
@@ -394,6 +400,13 @@ class Sync {
       if (line.includes(writeStart)) {
         const extracted = extractWriteIDAndConfig(line);
         if (extracted.id === snippet.id) {
+          if (extracted.source) {
+            var snippetPath = (snippet.filePath.directory.split('/').slice(1).join('/') + snippet.filePath.name);
+            var repoPath = ("https://github.com/" + snippet.owner + "/" + snippet.repo + "/" + snippetPath);
+            if (extracted.source.slice(1) != repoPath) {
+              continue;
+            }
+          }
           config = overwriteConfig(this.config.features, extracted.config);
           spliceStart = fileLineNumber;
           lookForStop = true;
@@ -487,7 +500,7 @@ const readMatchRegexp = new RegExp(
 
 const writeMatchRegexp = new RegExp(
   escapeStringRegexp(writeStart) +
-    /\s+(\S+)(?:\s+(.+))?\s*/.source +
+    /\s+(\S+)\s*(@https:\/\/(?:www)?github\.com[/A-Za-z0-9-_.]+)?\s*(?:\s+(.+))?\s*/.source +
     escapeStringRegexp(writeStartClose)
 );
 
@@ -503,13 +516,14 @@ function extractWriteIDAndConfig(line) {
   let id = matches[1];
   let config = {};
   try {
-    config =  matches[2] ? JSON.parse(matches[2]) : undefined ;
+    config =  matches[3] ? JSON.parse(matches[3]) : undefined ;
   } catch {
     console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
     config = undefined;
   }
+  let source = matches[2];
 
-  return {id, config};
+  return {id, config, source};
 }
 
 // overwriteConfig uses values if provided in the snippet placeholder

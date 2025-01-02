@@ -224,6 +224,22 @@ test('Per snippet selectedLines configuration', async() => {
 
 });
 
+test('Per snippet file path configuration', async () => {
+
+  cfg.origins = [
+    { owner: 'temporalio', repo: 'money-transfer-project-template-go' },
+  ],
+
+    fs.copyFileSync(`${fixturesPath}/empty-select-path.md`, `${testEnvPath}/empty-select-path.md`);
+
+  const synctron = new Sync(cfg, logger);
+  await synctron.run();
+  const data = fs.readFileSync(`${testEnvPath}/empty-select-path.md`, 'utf8');
+  const expected = fs.readFileSync(`test/fixtures/expected-select-path.md`, 'utf8');
+  expect(data).toMatch(expected);
+
+});
+
 test('Per snippet highlightedLines configuration', async() => {
 
   cfg.origins = [
@@ -248,7 +264,7 @@ test('Local file ingestion', async() => {
         owner: "temporalio",
         repo: "snipsync",
         ref: "main",
-      }
+      },
     },
   ],
   fs.copyFileSync(`${fixturesPath}/empty-test-local-files.md`,`${testEnvPath}/empty-test-local-files.md`);
