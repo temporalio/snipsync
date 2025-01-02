@@ -264,7 +264,7 @@ test('Local file ingestion', async() => {
         owner: "temporalio",
         repo: "snipsync",
         ref: "main",
-      }
+      },
     },
   ],
   fs.copyFileSync(`${fixturesPath}/empty-test-local-files.md`,`${testEnvPath}/empty-test-local-files.md`);

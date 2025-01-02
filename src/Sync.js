@@ -400,7 +400,7 @@ class Sync {
       if (line.includes(writeStart)) {
         const extracted = extractWriteIDAndConfig(line);
         if (extracted.id === snippet.id) {
-          if (extracted.source != null) {
+          if (extracted.source) {
             var snippetPath = (snippet.filePath.directory.split('/').slice(1).join('/') + snippet.filePath.name);
             var repoPath = ("https://github.com/" + snippet.owner + "/" + snippet.repo + "/" + snippetPath);
             if (extracted.source.slice(1) != repoPath) {
@@ -500,9 +500,7 @@ const readMatchRegexp = new RegExp(
 
 const writeMatchRegexp = new RegExp(
   escapeStringRegexp(writeStart) +
-    ///\s+(\S+)(?:\s+(.+))?\s*/.source +
-  ///\s+(\S+)(?:\s+(.+))?\s*(@https:\/\/(www)?github\.com[\/A-Za-z0-9-_\.]+)?\s*/.source +
-    /\s+(\S+)\s*(@https:\/\/(?:www)?github\.com[\/A-Za-z0-9-_\.]+)?\s*(?:\s+(.+))?\s*/.source +
+    /\s+(\S+)\s*(@https:\/\/(?:www)?github\.com[/A-Za-z0-9-_.]+)?\s*(?:\s+(.+))?\s*/.source +
     escapeStringRegexp(writeStartClose)
 );
 
@@ -523,7 +521,7 @@ function extractWriteIDAndConfig(line) {
     console.error(`Unable to parse JSON in options for ${id} - ignoring options`);
     config = undefined;
   }
-  let source = matches[2]
+  let source = matches[2];
 
   return {id, config, source};
 }
