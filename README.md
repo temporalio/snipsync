@@ -156,6 +156,14 @@ Specify a `startPattern` and an `endPattern`:
 <!--SNIPSTART hellouniverse {"startPattern" : "const \\{ greet", "endPattern": "\\}\\)"} -->
 ```
 
+**Specifying a source file**
+
+If the named snippet you want to extract exists in multiple source repositories, provide the path to only that source file after the snippet name, followed by an `@`:
+
+```
+<!--SNIPSTART money-transfer-project-template-go-workflow @https://github.com/temporalio/money-transfer-project-template-go/workflow.go -->
+```
+
 ## Run
 
 From the root directory of your project run the following command:
